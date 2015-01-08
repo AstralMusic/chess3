@@ -17,12 +17,16 @@ class Controller(QObject):
         self.players.append(NonHumanPlayer(1))
         self.players.append(NonHumanPlayer(2))
 
-        self.activePlayer = self.players[0]
+        self.activePlayer = None
         self.selectedFigure = None
         self.validSquares = iter([None])
 
         self.createFigures()
         QObject.connect(self, SIGNAL("turnEnded()"),self.turnPass)
+
+    def getPlayerById(self, Id):
+        for i in self.players:
+            if i.id == Id: return i
 
     def setUserPlayerName(self, playerName):
         self.userPlayer.name = playerName

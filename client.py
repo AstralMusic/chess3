@@ -20,14 +20,17 @@ class Client(QObject):
     def __init__(self):
         super(Client, self).__init__()
         self.socket = socket.socket()
-        self.server_addr = "localhost"
+        self.server_addr = "127.0.0.1"
         self.server_port = self.default_server_port
 
+        QObject.connect(self, SIGNAL("setupSucceed()"),self.connectToServer)
+        QObject.connect(self, SIGNAL("connected()"),self.waitingStart)
 
     def showSetupDialog(self):
         def takeInfo():
             global junk
-            self.controllerObject.setUserPlayerName = junk.name
+            self.controllerObject.setUserPlayerName(junk.name)
+            self.emit(SIGNAL("setupSucceed()"))
             del junk
 
         global junk
@@ -40,14 +43,36 @@ class Client(QObject):
 
     def connectToServer(self):
         #send name and save own id
-        self.socket.connect((self.server_addr,self.server_port))
-        self.socket.send(self.controllerObject.userPlayer.name)
-        pass
+        try:
+            self.socket.connect((self.server_addr,self.server_port))
+            print self.controllerObject.userPlayer.name, "  - sended"
+            self.socket.send(self.controllerObject.userPlayer.name)
+
+            number = self.socket.recv(2)
+            number = int(number[0])
+            self.controllerObject.setUserPlayerId(number)
+            print number, type(number)
+
+            self.emit(SIGNAL("connected()"))
+        except:
+            print "Connection failed"
 
     def waitingStart(self):
-
         #get info 'bout other players and start command
-        pass
+        for i in xrange(2):
+            msg = self.socket.recv(40)
+            print "client.waitingStart() msg = ", msg
+            playerId = int(msg[0])
+            odp = (playerId - self.controllerObject.userPlayer.id+3)%3
+            playerName = msg[2::2]
+            self.controllerObject.setRemotePlayerId(odp,playerId)
+            self.controllerObject.setRemotePlayerId(odp,playerName)
+        #get info bout active player
+        msg = self.socket.recv(2)
+        print msg
+        activePlayer = int( msg [0])
+        self.controllerObject.activePlayer = self.controllerObject.getPlayerById(activePlayer)
+        self.container.update()
 
     def main(self):
 
@@ -56,9 +81,10 @@ class Client(QObject):
 
         self.container = View()
         self.boardInstance = Board()
-        self.container.bindWith(self.boardInstance)
 
+        self.container.bindWith(self.boardInstance)
         self.controllerObject = Controller(self.boardInstance)
+        self.container.bindWithController(self.controllerObject)
 
         QObject.connect(self.controllerObject,SIGNAL("changed()"),self.container.update)
 

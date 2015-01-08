@@ -15,17 +15,15 @@ class Board(QObject):
         temp_square = Square()
         temp_square.createButton(containerWidget)
 
-
     def createPlayground(self, containerWidget):
-        for i in range(3):
-            self.data.append([])
-            for j in range(4):
-                self.data[i].append([])
-                for k in range(8):
-                    temp_square = Square()
-                    temp_square.createButton(containerWidget)
-                    temp_square.setup(i,j,k)
-                    self.data[i][j].append(temp_square)
+        def square_init (a,b,c):
+            temp_square = Square()
+            temp_square.createButton(containerWidget)
+            temp_square.setup(a,b,c)
+            return temp_square
+
+        self.data = [[[ square_init (i,j,k) for k in xrange(8)] for j in xrange(4)] for i in xrange(3)]
+
 
     def getData(self, t = (0,0,0)):
         return self.data[t[0]][t[1]][t[2]]

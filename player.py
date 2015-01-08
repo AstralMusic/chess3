@@ -9,7 +9,7 @@ class Player(QObject):
         super(Player, self).__init__()
         self.setup(onDeskPosition, name)
 
-    def setup(self, onDeskPosition , name = "user"):
+    def setup(self, onDeskPosition , name):
         self.name = name
         self.id = onDeskPosition
         self.onDeskPosition = onDeskPosition

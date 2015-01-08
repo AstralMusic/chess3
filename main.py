@@ -16,9 +16,11 @@ def main():
 
     container = View()
     boardInstance = Board()
+
     container.bindWith(boardInstance)
 
     manager = Controller(boardInstance)
+    container.bindWithController(manager)
 
     QObject.connect(manager,SIGNAL("changed()"),container.update)
 

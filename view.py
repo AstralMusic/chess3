@@ -27,6 +27,8 @@ class View(QWidget):
         boardObject.createPlayground(self)
         self.boardExample = boardObject
 
+    def bindWithController(self, controllerObject):
+        self.controllerExample = controllerObject
 
     #paint event initiates painting process by creating an instance of QtGui.QPainter class
     def paintEvent(self, e):
@@ -66,4 +68,17 @@ class View(QWidget):
                         #show figure
                         QTextCodec.setCodecForCStrings(QTextCodec.codecForName("UTF-8"))
                         qpainter_object.setPen(current_square.figure.player.color)
-                        qpainter_object.drawText(QPolygonF(current_square.coords).boundingRect().x()+10,QPolygonF(current_square.coords).boundingRect().y()+55, QString(current_square.figure.__str__()))
+                        qpainter_object.drawText(QPolygonF(current_square.coords).boundingRect().x()+10,\
+                                                 QPolygonF(current_square.coords).boundingRect().y()+55,\
+                                                 QString(current_square.figure.__str__()))
+
+
+        #show which player is active and names
+        if self.controllerExample.activePlayer:
+            qpainter_object.drawText(50,50,QString(self.controllerExample.players[1].name))
+            qpainter_object.drawText(600,50,QString(self.controllerExample.players[2].name))
+            qpainter_object.drawText(600,600,QString(self.controllerExample.players[0].name))
+
+            qpainter_object.translate(400,400)
+            qpainter_object.rotate(self.controllerExample.activePlayer.onDeskPosition * 120.)
+            qpainter_object.drawPolygon(QPolygonF([QPointF(-150,350),QPointF(150,350), QPointF(0,300) ]))
