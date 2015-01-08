@@ -64,14 +64,14 @@ class Client(QObject):
             print "client.waitingStart() msg = ", msg
             playerId = int(msg[0])
             odp = (playerId - self.controllerObject.userPlayer.id+3)%3
-            playerName = msg[2::2]
+            playerName = msg[1::]
             self.controllerObject.setRemotePlayerId(odp,playerId)
-            self.controllerObject.setRemotePlayerId(odp,playerName)
+            self.controllerObject.setRemotePlayerName(odp,playerName)
         #get info bout active player
         msg = self.socket.recv(2)
-        print msg
         activePlayer = int( msg [0])
         self.controllerObject.activePlayer = self.controllerObject.getPlayerById(activePlayer)
+        print "client.waitingStart() active player = ", self.controllerObject.activePlayer.id
         self.container.update()
 
     def main(self):

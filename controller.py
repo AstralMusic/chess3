@@ -32,11 +32,13 @@ class Controller(QObject):
         self.userPlayer.name = playerName
     def setUserPlayerId(self, playerId):
         self.userPlayer.id = playerId
+        self.userPlayer.setColor()
 
     def setRemotePlayerName(self, onDeskPosition, playerName):
         self.players[onDeskPosition].name = playerName
     def setRemotePlayerId(self, onDeskPosition, playerId):
         self.players[onDeskPosition].id = playerId
+        self.players[onDeskPosition].setColor()
 
 
     def createFigures(self):

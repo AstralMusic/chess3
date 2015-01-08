@@ -75,8 +75,8 @@ class View(QWidget):
 
         #show which player is active and names
         if self.controllerExample.activePlayer:
-            qpainter_object.drawText(50,50,QString(self.controllerExample.players[1].name))
-            qpainter_object.drawText(600,50,QString(self.controllerExample.players[2].name))
+            qpainter_object.drawText(50,100,QString(self.controllerExample.players[1].name))
+            qpainter_object.drawText(600,100,QString(self.controllerExample.players[2].name))
             qpainter_object.drawText(600,600,QString(self.controllerExample.players[0].name))
 
             qpainter_object.translate(400,400)

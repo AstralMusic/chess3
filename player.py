@@ -13,14 +13,12 @@ class Player(QObject):
         self.name = name
         self.id = onDeskPosition
         self.onDeskPosition = onDeskPosition
+        self.color = QColor()
 
+    def setColor(self):
         if self.id == 0: self.color = QColor(120,120,0)
         if self.id == 1: self.color = QColor(120,120,120)
         if self.id == 2: self.color = QColor(0,120,120)
-
-        print self.id, self.name, self.color.getRgbF()
-
-
 
 class HumanPlayer(Player):
     pass
