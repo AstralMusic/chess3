@@ -28,6 +28,13 @@ class Board(QObject):
     def getData(self, t = (0,0,0)):
         return self.data[t[0]][t[1]][t[2]]
 
+    def getSquareCoordinates(self,square):
+        for a in xrange(3):
+            for b in xrange(4):
+                for c in xrange(8):
+                    if self.data[a][b][c] == square :
+                        return (a,b,c)
+
     def unselectAll(self):
         for a in range(3):
             for b in range(4):

@@ -22,7 +22,11 @@ class Controller(QObject):
         self.validSquares = iter([None])
 
         self.createFigures()
-        QObject.connect(self, SIGNAL("turnEnded()"),self.turnPass)
+        #QObject.connect(self, SIGNAL("turnEnded()"),self.turnPass)
+
+    def setActivePlayer(self, player):
+        self.activePlayer = player
+        self.emit(SIGNAL("changed()"))
 
     def getPlayerById(self, Id):
         for i in self.players:
@@ -56,7 +60,7 @@ class Controller(QObject):
     def handleClick(self):
         sender =  QObject.sender(QObject())
         if not sender.isEmpty():
-            if sender.figure.player == self.activePlayer:
+            if sender.figure.player == self.activePlayer and self.activePlayer == self.userPlayer:
                 self.boardExample.unselectAll()
                 sender.figure.select()
                 self.squareWithSelectedFigure = sender
@@ -64,24 +68,23 @@ class Controller(QObject):
                 self.boardExample.highlight(self.validSquares)
             if sender in self.validSquares:
                 self.kill(self.squareWithSelectedFigure,sender)
+                self.emit(SIGNAL("turnEndedByUser"))
         else:
             if sender in self.validSquares:
                 self.move(self.squareWithSelectedFigure,sender)
+                self.emit(SIGNAL("turnEndedByUser"))
         self.emit(SIGNAL("changed()"))
 
     def move(self, source, destination):
+        srcCoords = self.boardExample.getSquareCoordinates(source)
+        dstCoords = self.boardExample.getSquareCoordinates(destination)
+        self.movement = srcCoords + dstCoords
+
         destination.figure = source.figure
         source.figure = None
-        self.emit(SIGNAL("turnEnded()"))
+
 
     def kill(self, source, destination):
-        destination.figure = source.figure
-        source.figure = None
-        self.emit(SIGNAL("turnEnded()"))
+        self.move(source, destination)
 
-    def turnPass(self):
-        print "Turn ended"
-        x = self.players.index(self.activePlayer)
-        self.activePlayer = self.players[(x+1)%3]
-        self.validSquares = []
-        self.boardExample.unselectAll()
+

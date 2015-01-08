@@ -26,6 +26,8 @@ class Client(QObject):
         QObject.connect(self, SIGNAL("setupSucceed()"),self.connectToServer)
         QObject.connect(self, SIGNAL("connected()"),self.waitingStart)
 
+        QObject.connect(self, SIGNAL("newTurn"),self.play)
+
     def showSetupDialog(self):
         def takeInfo():
             global junk
@@ -48,31 +50,133 @@ class Client(QObject):
             print self.controllerObject.userPlayer.name, "  - sended"
             self.socket.send(self.controllerObject.userPlayer.name)
 
+            global junk
+            junk.hide()
+
             number = self.socket.recv(2)
             number = int(number[0])
             self.controllerObject.setUserPlayerId(number)
-            print number, type(number)
+            print "recieved id = ", number
 
             self.emit(SIGNAL("connected()"))
         except:
             print "Connection failed"
 
     def waitingStart(self):
-        #get info 'bout other players and start command
+        #get info 'bout other players
         for i in xrange(2):
             msg = self.socket.recv(40)
-            print "client.waitingStart() msg = ", msg
             playerId = int(msg[0])
             odp = (playerId - self.controllerObject.userPlayer.id+3)%3
             playerName = msg[1::]
             self.controllerObject.setRemotePlayerId(odp,playerId)
             self.controllerObject.setRemotePlayerName(odp,playerName)
-        #get info bout active player
+        #get info 'bout active player
         msg = self.socket.recv(2)
         activePlayer = int( msg [0])
-        self.controllerObject.activePlayer = self.controllerObject.getPlayerById(activePlayer)
-        print "client.waitingStart() active player = ", self.controllerObject.activePlayer.id
+        activePlayer = self.controllerObject.getPlayerById(activePlayer)
+        self.controllerObject.setActivePlayer(activePlayer)
+        #print "container updated .from waitingStart()"
+        self.emit(SIGNAL("newTurn"))
+
+    def waitOtherUserAction(self):
         self.container.update()
+        if self.controllerObject.activePlayer != self.controllerObject.userPlayer:
+            self.socket.setblocking(0)
+            idle = None
+            while not idle:
+                try:
+                    idle = self.socket.recv(10)
+                except:
+                    pass
+                if idle: break
+            print "Recieved '%s' from server" % idle
+            self.socket.setblocking(1)
+            if "turn_ended" in idle:
+                self.emit(SIGNAL("turnEnded()"))
+                #self.makeRemoteMove()
+
+    def play(self):
+        if self.controllerObject.activePlayer !=self.controllerObject.userPlayer:
+            print "THAT'S NOR MY TURN NOW"
+            self.waitOtherUserAction()
+        else: print "IT IS MY TURN"
+
+    def handleInsideChangeTurn(self):
+        self.controllerObject.validSquares = []
+        self.boardInstance.unselectAll()
+
+        self.socket.send("turn_ended")
+        print "Message sended to server = 'turn_ended' "
+        print "Now we'll send this ", self.controllerObject.movement
+        for x in self.controllerObject.movement:
+            msg = str(x)
+            print "Message sended to server = '%s' " % msg
+            self.socket.send(msg)
+
+        print "Turn ended"
+        x = self.controllerObject.players.index(self.controllerObject.activePlayer)
+        self.controllerObject.activePlayer = self.controllerObject.players[(x+1)%3]
+
+        self.container.update()
+        print "New active Player: ", self.controllerObject.activePlayer.id
+
+        self.emit(SIGNAL("newTurn"))
+
+    def turnPass(self):
+        wasActivePlayer = self.controllerObject.activePlayer
+        print "Was active Player: %d . from turnPass() " % wasActivePlayer.id
+        x = self.controllerObject.players.index(self.controllerObject.activePlayer)
+        self.controllerObject.activePlayer = self.controllerObject.players[(x+1)%3]
+        print "Active Player: ", self.controllerObject.activePlayer.id
+        self.controllerObject.validSquares = []
+        self.boardInstance.unselectAll()
+        print "Turn ended"
+
+        if wasActivePlayer.id == self.controllerObject.userPlayer.id:
+            self.socket.send("turn_ended")
+            print "Message sended to server = 'turn_ended' "
+            for x in self.controllerObject.movement:
+                msg = str(x)
+                print "Message sended to server = '%s' " % msg
+                self.socket.send(msg)
+
+        else:
+            print "Try to call makeRemoteMove() because it's not my turn"
+            self.makeRemoteMove()
+            self.emit(SIGNAL("newTurn"))
+
+    def handleOutsideChangeTurn(self):
+        print "Try to call makeRemoteMove() because it's not my turn"
+        self.makeRemoteMove()
+
+        x = self.controllerObject.players.index(self.controllerObject.activePlayer)
+        self.controllerObject.activePlayer = self.controllerObject.players[(x+1)%3]
+
+        self.container.update()
+
+        print "New active Player: ", self.controllerObject.activePlayer.id
+
+        self.emit(SIGNAL("newTurn"))
+
+
+
+    def makeRemoteMove(self):
+        self.socket.setblocking(1)
+        newCoords = list()
+        for i in xrange(6):
+            newCoord = self.socket.recv(1)
+            newCoords.append(int(newCoord))
+            print "from makeRemoteMove recieved:", newCoord
+        print "Want to move remotely ", newCoords[0:3], " -> ", newCoords[3:6]
+
+        src = self.boardInstance.getData(newCoords[0:3])
+        dst = self.boardInstance.getData(newCoords[3:6])
+
+        self.controllerObject.move(src, dst)
+
+
+        #self.controllerObject.emit(SIGNAL("turnEnded()"))
 
     def main(self):
 
@@ -84,6 +188,12 @@ class Client(QObject):
 
         self.container.bindWith(self.boardInstance)
         self.controllerObject = Controller(self.boardInstance)
+        QObject.connect(self.controllerObject, SIGNAL("turnEndedByUser"),self.handleInsideChangeTurn)
+        QObject.connect(self, SIGNAL("turnEnded()"),self.handleOutsideChangeTurn)
+
+
+        ## QObject.connect(self.controllerObject, SIGNAL("turnEnded()"),self.container.update)
+
         self.container.bindWithController(self.controllerObject)
 
         QObject.connect(self.controllerObject,SIGNAL("changed()"),self.container.update)

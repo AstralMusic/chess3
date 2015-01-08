@@ -26,9 +26,16 @@ class SetupBox(QWidget):
         self.verticalLayout.addWidget(self.button)
         self.gridLayout.addLayout(self.verticalLayout, 0, 0, 1, 1)
 
-        QShortcut(QKeySequence("Return"),self).activated.connect(self.button.click)
-        self.button.clicked.connect(self.getInfo)
+        #PLEASE WAIT message
 
-    def getInfo(self):
+        self.label2 = QLabel(self)
+        self.label2.setFont(f)
+        self.label2.setText(QString("Waiting other players"))
+        self.label2.setVisible(False)
+
+        QShortcut(QKeySequence("Return"),self).activated.connect(self.button.click)
+        self.button.clicked.connect(self.report)
+
+    def report(self):
         self.name = self.textBox.text()
         self.emit(SIGNAL("infoGathered()"))
