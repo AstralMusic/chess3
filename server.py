@@ -8,7 +8,7 @@ import socket, sys, time, random, logging
 logging.basicConfig(
    level=logging.DEBUG,
    #format='%(asctime)s:%(levelname)s:%(name)s:%(message)s',
-   format='%(asctime)s:%(levelname)s:%(message)s ',
+   format='%(asctime)s : %(message)s ',
    datefmt="%Y-%m-%d %H:%M:%S",
    filename="../out.log",
    filemode='a'
@@ -111,13 +111,13 @@ class Server:
 
             time.sleep(.025)
             for client in self.clients:
-                logging.info( "movement info: ", newCoords, " for player %s (%d)" % (client.name, client.id) )
+                logging.info(str.join( "movement info: " + str([str(i) for i in newCoords]) + " for player %s (%d)" % (client.name, client.id) ))
                 if client != self.clients[self.activePlayerId]:
                     for i in xrange(len(newCoords)):
                         if i == 0 or i == 3:
                             newCoords[i] = (newCoords[i] - client.id + 3) % 3
                         client.inform(str(newCoords[i]))
-                        logging.info(  "Sended that coord to: %s ( %d ) and message is: %d" % (client.name, client.id, newCoords[i]) )
+                    logging.info( str.join( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ str([str(i) for i in newCoords]) ))
 
             self.turnPass()
 
