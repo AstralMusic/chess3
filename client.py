@@ -98,7 +98,7 @@ class Client(QObject):
 
     def play(self):
         if self.controllerObject.activePlayer !=self.controllerObject.userPlayer:
-            print "THAT'S NOR MY TURN NOW"
+            print "THAT'S NOT MY TURN NOW"
             self.waitOtherUserAction()
         else: print "IT IS MY TURN"
 
@@ -108,10 +108,9 @@ class Client(QObject):
 
         self.socket.send("turn_ended")
         print "Message sended to server = 'turn_ended' "
-        print "Now we'll send this ", self.controllerObject.movement
+        print "Now we send to server this: ", self.controllerObject.movement
         for x in self.controllerObject.movement:
             msg = str(x)
-            print "Message sended to server = '%s' " % msg
             self.socket.send(msg)
 
         print "Turn ended"
@@ -119,35 +118,11 @@ class Client(QObject):
         self.controllerObject.activePlayer = self.controllerObject.players[(x+1)%3]
 
         self.container.update()
-        print "New active Player: ", self.controllerObject.activePlayer.id
+        print "New active Player: %d \n"% self.controllerObject.activePlayer.id
 
         self.emit(SIGNAL("newTurn"))
 
-    def turnPass(self):
-        wasActivePlayer = self.controllerObject.activePlayer
-        print "Was active Player: %d . from turnPass() " % wasActivePlayer.id
-        x = self.controllerObject.players.index(self.controllerObject.activePlayer)
-        self.controllerObject.activePlayer = self.controllerObject.players[(x+1)%3]
-        print "Active Player: ", self.controllerObject.activePlayer.id
-        self.controllerObject.validSquares = []
-        self.boardInstance.unselectAll()
-        print "Turn ended"
-
-        if wasActivePlayer.id == self.controllerObject.userPlayer.id:
-            self.socket.send("turn_ended")
-            print "Message sended to server = 'turn_ended' "
-            for x in self.controllerObject.movement:
-                msg = str(x)
-                print "Message sended to server = '%s' " % msg
-                self.socket.send(msg)
-
-        else:
-            print "Try to call makeRemoteMove() because it's not my turn"
-            self.makeRemoteMove()
-            self.emit(SIGNAL("newTurn"))
-
     def handleOutsideChangeTurn(self):
-        print "Try to call makeRemoteMove() because it's not my turn"
         self.makeRemoteMove()
 
         x = self.controllerObject.players.index(self.controllerObject.activePlayer)
@@ -179,10 +154,6 @@ class Client(QObject):
         #self.controllerObject.emit(SIGNAL("turnEnded()"))
 
     def main(self):
-
-        app = QtGui.QApplication(sys.argv)
-
-
         self.container = View()
         self.boardInstance = Board()
 
@@ -202,8 +173,8 @@ class Client(QObject):
 
         self.setup()
 
-        sys.exit(app.exec_())
-
 if __name__ == '__main__':
+    app = QtGui.QApplication(sys.argv)
     program = Client()
     program.main()
+    sys.exit(app.exec_())
