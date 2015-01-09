@@ -3,7 +3,7 @@ __author__ = "Vladimir Konak"
 #__name__ = '__main__'
 
 
-import socket, sys, time
+import socket, sys, time, threading
 
 from  PyQt4 import QtGui
 from PyQt4.QtCore import QObject, SIGNAL
@@ -23,10 +23,17 @@ class Client(QObject):
         self.server_addr = "127.0.0.1"
         self.server_port = self.default_server_port
 
+        #thread for listening server
+        self.idleEvent = threading.Event()
+        self.idle = threading.Thread(target=self.waitOtherUserAction)
+
         QObject.connect(self, SIGNAL("setupSucceed()"),self.connectToServer)
         QObject.connect(self, SIGNAL("connected()"),self.waitingStart)
 
         QObject.connect(self, SIGNAL("newTurn"),self.play)
+
+    def __del__(self):
+        del self.idle
 
     def showSetupDialog(self):
         def takeInfo():
@@ -76,10 +83,13 @@ class Client(QObject):
         activePlayer = int( msg [0])
         activePlayer = self.controllerObject.getPlayerById(activePlayer)
         self.controllerObject.setActivePlayer(activePlayer)
-        #print "container updated .from waitingStart()"
+        #starting listening event
+        self.idle.start()
+        print "idle started"
         self.emit(SIGNAL("newTurn"))
 
-    def waitOtherUserAction(self):
+    def waitOtherUserAction(self, event = threading.Event()):
+        event.wait()
         self.container.update()
         if self.controllerObject.activePlayer != self.controllerObject.userPlayer:
             self.socket.setblocking(0)
@@ -94,12 +104,12 @@ class Client(QObject):
             self.socket.setblocking(1)
             if "turn_ended" in idle:
                 self.emit(SIGNAL("turnEnded()"))
-                #self.makeRemoteMove()
+                event.clear()
 
     def play(self):
         if self.controllerObject.activePlayer !=self.controllerObject.userPlayer:
             print "THAT'S NOT MY TURN NOW"
-            self.waitOtherUserAction()
+            self.idleEvent.set()
         else: print "IT IS MY TURN"
 
     def handleInsideChangeTurn(self):
@@ -123,7 +133,9 @@ class Client(QObject):
         self.emit(SIGNAL("newTurn"))
 
     def handleOutsideChangeTurn(self):
+        self.idle.join()
         self.makeRemoteMove()
+
 
         x = self.controllerObject.players.index(self.controllerObject.activePlayer)
         self.controllerObject.activePlayer = self.controllerObject.players[(x+1)%3]

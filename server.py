@@ -3,7 +3,7 @@ __author__ = "Vladimir Konak"
 
 # __name__ = '__main__'
 
-import socket, sys, time, random, logging
+import socket, sys, time, random, logging , string
 
 logging.basicConfig(
    level=logging.DEBUG,
@@ -111,13 +111,13 @@ class Server:
 
             time.sleep(.025)
             for client in self.clients:
-                logging.info(str.join( "movement info: " + str([str(i) for i in newCoords]) + " for player %s (%d)" % (client.name, client.id) ))
+                logging.info(str( "movement info: " + string.join([str(i) for i in newCoords]) + " for player %s (%d)" % (client.name, client.id) ))
                 if client != self.clients[self.activePlayerId]:
                     for i in xrange(len(newCoords)):
                         if i == 0 or i == 3:
                             newCoords[i] = (newCoords[i] - client.id + 3) % 3
                         client.inform(str(newCoords[i]))
-                    logging.info( str.join( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ str([str(i) for i in newCoords]) ))
+                    logging.info( str( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ string.join([str(i) for i in newCoords]) ))
 
             self.turnPass()
 
@@ -126,16 +126,16 @@ class Server:
         try:
             self.waitingClients()
         except:
-            logging.info( "Connecting with clients failed" )
+            logging.info( "Connecting with clients failed \n")
         try:
             self.shoutStart()
         except:
-            logging.info( "Bad connection" )
+            logging.info( "Bad connection \n")
         #self.play()
         try:
             self.play()
         except:
-            logging.info( "server.play() crushed" )
+            logging.info( "server.play() crushed \n")
 
 if __name__ == '__main__':
     program = Server()
