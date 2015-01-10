@@ -50,8 +50,8 @@ class Square(QAbstractButton):
                     QPointF((dc+1)*r,r*(db-1-(2-abs(dc+1))*sin(radians(b*d_alpha+d_alpha)))*k),
                     QPointF(dc*r,r*(db-1-(2-abs(dc))*sin(radians(b*d_alpha+d_alpha)))*k)
                          ]
-        if (b+c)%2: self.color = black
-        else: self.color = white
+        if (b+c)%2: self.color = white
+        else: self.color = black
 
         def rotate(self,theta):
             theta = radians(theta)

@@ -33,7 +33,6 @@ class Client(QObject):
 
     def showSetupDialog(self):
         def takeInfo():
-            global junk
             self.controllerObject.setUserPlayerName(junk.name)
             self.emit(SIGNAL("setupSucceed()"))
 
@@ -48,7 +47,9 @@ class Client(QObject):
     def connectToServer(self):
         #send name and save own id
         try:
-            self.socket.connect((self.server_addr,self.server_port))
+            resCode = self.socket.connect_ex((self.server_addr,self.server_port))
+            if resCode: raise BaseException, "Could not connect to server"
+
             print self.controllerObject.userPlayer.name, "  - sended"
             self.socket.send(self.controllerObject.userPlayer.name)
 
@@ -64,16 +65,22 @@ class Client(QObject):
                 from time import sleep
                 i = 0
                 text = "Waiting for others"
-                while True:
-                    i += 1
-                    junk.label2.setText(QString(str(text + "."*((i + 1)%6 + 1))))
-                    sleep(0.3)
+                try:
+                    while junk:
+                        i += 1
+                        junk.label2.setText(QString(str(text + "."*((i + 1)%6 + 1))))
+                        sleep(0.3)
+                except:
+                    pass
             animate = threading.Thread(target=AWB)
             animate.start()
 
 
         except BaseException, e:
             print "Connection failed. %s" % str(e[0])
+            global junk
+            del junk
+            self.container.close()
 
     def waitingStart(self):
         #get info 'bout other players
@@ -92,6 +99,7 @@ class Client(QObject):
 
         global junk
         junk.close()
+        del junk
 
         self.emit(SIGNAL("newTurn"))
 

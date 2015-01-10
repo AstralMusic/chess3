@@ -33,7 +33,6 @@ class SetupBox(QWidget):
         f2 = QFont()
         f2.setPixelSize(41)
         newLabel.setFont(f2)
-        #newLabel.setText(QString("Waiting other players"))
         newLabel.setVisible(False)
         self.label2= newLabel
 
@@ -44,7 +43,6 @@ class SetupBox(QWidget):
         self.name = self.textBox.text()
         self.textBox.hide()
         self.button.hide()
-        self.verticalLayout.removeWidget(self.label)
         self.label.clear()
         self.label2.show()
         self.emit(SIGNAL("infoGathered()"))

@@ -26,11 +26,13 @@ class Client:
         self.name = name
 
     def inform(self, msg):
-        self.socket.send(msg)
+        try:
+            self.socket.send(msg)
+        except BaseException,e:
+            logging.error("Sending data to  %s (%d), because of lost connection with client." % (self.name,self.name))
 
     def __call__(self, *args, **kwargs):
         return self.socket
-
 
 class Server:
     default_server_address = "92.113.247.161"
@@ -79,9 +81,7 @@ class Server:
                     time.sleep(.025)
             each.inform(str(self.activePlayerId))
             logging.debug( "Informed %s (%d) about two other players and who's active player" % (each.name, each.id) )
-
-    def informClients(self):
-        pass
+        logging.info("FINISHED SETUP\n")
 
     def turnPass(self):
         self.activePlayerId = (self.activePlayerId + 1) % 3
@@ -100,25 +100,25 @@ class Server:
                         client.inform("turn_ended")
                         logging.info( "'turn_ended' was sent to %s (%d)" % (client.name , client.id) )
 
-            newCoords = list()
+            rcvdCoords = list()
             for i in xrange(6):
-                newCoord = int(self.clients[self.activePlayerId].socket.recv(1))
+                rcvdCoord = int(self.clients[self.activePlayerId].socket.recv(1))
                 if i == 0 or i == 3:
-                    newCoord = (newCoord + self.activePlayerId) % 3
-                newCoords.append(int(newCoord))
-            logging.info(  str("Recieved sequence: {0}".format(newCoords) ))
+                    rcvdCoord = (rcvdCoord + self.activePlayerId) % 3
+                rcvdCoords.append(int(rcvdCoord))
+            logging.info(  str("Recieved sequence: {0}".format(rcvdCoords) ))
 
 
             time.sleep(.025)
             for client in self.clients:
                 if client != self.clients[self.activePlayerId]:
-                    logging.info(str( "movement info: " + string.join([str(i) for i in newCoords]) + " for player %s (%d)" % (client.name, client.id) ))
-                    calcCoords = newCoords[:]
-                    for i in xrange(len(calcCoords)):
+                    logging.info(str( "movement info: " + string.join([str(i) for i in rcvdCoords]) + " for player %s (%d)" % (client.name, client.id) ))
+                    newCoords = rcvdCoords[:]
+                    for i in xrange(len(newCoords)):
                         if i == 0 or i == 3:
-                            calcCoords[i] = (calcCoords[i] - client.id + 3) % 3
-                        client.inform(str(calcCoords[i]))
-                    logging.info( str( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ string.join([str(i) for i in calcCoords]) ))
+                            newCoords[i] = (newCoords[i] - client.id + 3) % 3
+                        client.inform(str(newCoords[i]))
+                    logging.info( str( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ string.join([str(i) for i in newCoords]) ))
 
             self.turnPass()
 

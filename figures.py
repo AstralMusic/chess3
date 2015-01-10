@@ -46,6 +46,7 @@ class Figures(QObject):
         newAalter = ((1 +(c+n)/4)*((b+m)/4)+a)%3
         newB = (b+m)/4*(7-b-m) + (1 - (b+m)/4)*(b+m)
         newC = (c+n)*(1-(b+m)/4) + (b+m)/4*(7-c-n)
+        if newC<0 or newC>7: return
         if newA == newAalter: return (newA, newB, newC)
         else: return (newA,newB,newC,newAalter)
 
@@ -66,38 +67,48 @@ class Figures(QObject):
                 if current.isEmpty():
                     validMoves.append(current)
                     recurs(np,dm,dn)
-                elif not current.figure.player == self.activePlayer:
+                elif current.figure.player != self.activePlayer:
                     validMoves.append(current)
-                    return validMoves
                 if aa:
                     npAlter = (aa,np[1],np[2])
                     current2 = boardInstance.getData(npAlter)
                     if current2.isEmpty():
                         validMoves.append(current2)
                         recurs(npAlter,dm,dn)
-                    elif not current2.figure.player == self.activePlayer:
+                    elif current2.figure.player != self.activePlayer:
                         validMoves.append(current2)
-                        return validMoves
-                else:
-                    return  validMoves
             except:
-                return validMoves
+                pass
+
+        def nonrecurs(position,dm , dn):
+            try:
+                np = self.newPosition(position,dm,dn)
+                if len(np)>3: aa = np[3]
+                else: aa = None
+                current = boardInstance.getData(np)
+                if current.isEmpty():
+                    validMoves.append(current)
+                elif current.figure.player != self.activePlayer:
+                    validMoves.append(current)
+                if aa:
+                    npAlter = (aa,np[1],np[2])
+                    current2 = boardInstance.getData(npAlter)
+                    if current2.isEmpty():
+                        validMoves.append(current2)
+                    elif current2.figure.player != self.activePlayer:
+                        validMoves.append(current2)
+            except:
+                pass
 
         if figure.type == "PAWN":
-            for i in [1]:
-                for j in [-1,0,1]:
-                    if i==j==0: continue
-                    try:
-                        if boardInstance.getData(self.newPosition(pos, i, j)).isEmpty() and j == 0:
-                            validMoves.append(boardInstance.getData(self.newPosition(pos, i, j)))
-                            if pos[1]==1 and pos[0]==self.activePlayer.onDeskPosition and \
-                                    boardInstance.getData(self.newPosition(pos, 2, 0)).isEmpty():
-                                validMoves.append(boardInstance.getData(self.newPosition(pos, 2, 0)))
-                        elif boardInstance.getData(self.newPosition(pos, i, j)).figure.player != activePlayer and j!=0:
-                            validMoves.append(boardInstance.getData(self.newPosition(pos, i, j)))
-                    except:
-                        pass
-
+            nonrecurs(pos, 1, 0)#FIX THIS
+            if pos[1]==1 and pos[0]==self.activePlayer.onDeskPosition:
+                nonrecurs(pos, 2, 0)#AND THIS
+            for j in [-1,1]:
+                nextPos = self.newPosition(pos, 1, j)
+                if not nextPos: continue
+                if not boardInstance.getData(nextPos).isEmpty():
+                    nonrecurs(pos, 1, j)
         elif figure.type == "ROOK":
             recurs(pos,1,0)
             recurs(pos,0,1)
@@ -107,37 +118,22 @@ class Figures(QObject):
             for i in [-2,-1,1,2]:
                 for j in [-2,-1,1,2]:
                     if abs(i)==abs(j): continue
-                    try:
-                        if boardInstance.getData(self.newPosition(pos, i, j)).isEmpty() or\
-                                        boardInstance.getData(self.newPosition(pos, i, j)).figure.player != activePlayer:
-                            validMoves.append(boardInstance.getData(self.newPosition(pos, i, j)))
-                    except:
-                        pass
+                    nonrecurs(pos, i , j)
         elif figure.type == "BISHOP":
             recurs(pos,1,1)
             recurs(pos,-1,1)
             recurs(pos,1,-1)
             recurs(pos,-1,-1)
         elif figure.type == "QUEEN":
-            recurs(pos,1,1)
-            recurs(pos,-1,1)
-            recurs(pos,1,-1)
-            recurs(pos,-1,-1)
-            recurs(pos,1,0)
-            recurs(pos,0,1)
-            recurs(pos,-1,0)
-            recurs(pos,0,-1)
+            for i in [-1,0,1]:
+                for j in [-1,0,1]:
+                    if i==j==0: continue
+                    else: recurs(pos, i, j)
         elif figure.type == "KING":
             for i in [-1,0,1]:
                 for j in [-1,0,1]:
                     if i==j==0: continue
-                    try:
-                        if boardInstance.getData(self.newPosition(pos, i, j)).isEmpty() or\
-                                        boardInstance.getData(self.newPosition(pos, i, j)).figure.player != activePlayer:
-                            validMoves.append(boardInstance.getData(self.newPosition(pos, i, j)))
-                    except:
-                        pass
-
+                    else: nonrecurs(pos, i, j)
 
         return validMoves
 

@@ -66,25 +66,33 @@ class Controller(QObject):
                 self.squareWithSelectedFigure = sender
                 self.validSquares = self.figuresContainer.showPossibleMoves(sender.figure, self.boardExample, self.activePlayer)
                 self.boardExample.highlight(self.validSquares)
-            if sender in self.validSquares:
-                self.kill(self.squareWithSelectedFigure,sender)
-                self.emit(SIGNAL("turnEndedByUser"))
-        else:
-            if sender in self.validSquares:
-                self.move(self.squareWithSelectedFigure,sender)
-                self.emit(SIGNAL("turnEndedByUser"))
+        if sender in self.validSquares:
+            self.move(self.squareWithSelectedFigure,sender)
+            self.emit(SIGNAL("turnEndedByUser"))
         self.emit(SIGNAL("changed()"))
 
     def move(self, source, destination):
+        if destination.figure:
+            print "DST player was = " ,destination.figure.player.id
+            if destination.figure.type == "KING":
+                for eachFigure in self.figuresContainer.grid:
+                    if eachFigure.player == destination.figure.player:
+                        eachFigure.player = source.figure.player
+
         srcCoords = self.boardExample.getSquareCoordinates(source)
         dstCoords = self.boardExample.getSquareCoordinates(destination)
         self.movement = srcCoords + dstCoords
 
+        print "SRC player now = " ,source.figure.player.id
         destination.figure = source.figure
         source.figure = None
+        print "DST player now = " ,destination.figure.player.id
 
-
+    """
     def kill(self, source, destination):
+        if self.boardExample.getData(destination).figure.type == "KING":
+            pass
         self.move(source, destination)
 
 
+"""
