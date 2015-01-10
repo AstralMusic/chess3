@@ -25,15 +25,12 @@ class Client(QObject):
 
         #thread for listening server
         self.idleEvent = threading.Event()
-        self.idle = threading.Thread(target=self.waitOtherUserAction)
-
+        #connect signals and slots
         QObject.connect(self, SIGNAL("setupSucceed()"),self.connectToServer)
         QObject.connect(self, SIGNAL("connected()"),self.waitingStart)
-
         QObject.connect(self, SIGNAL("newTurn"),self.play)
-
-    def __del__(self):
-        del self.idle
+        QObject.connect(self, SIGNAL("otherUserFinishedTurn"),self.handleOutsideChangeTurn)
+        QObject.connect(self, SIGNAL("end_the_game"),self.gameEnded)
 
     def showSetupDialog(self):
         def takeInfo():
@@ -66,8 +63,8 @@ class Client(QObject):
             print "recieved id = ", number
 
             self.emit(SIGNAL("connected()"))
-        except:
-            print "Connection failed"
+        except BaseException, e:
+            print "Connection failed. %s" % str(e[0])
 
     def waitingStart(self):
         #get info 'bout other players
@@ -83,13 +80,9 @@ class Client(QObject):
         activePlayer = int( msg [0])
         activePlayer = self.controllerObject.getPlayerById(activePlayer)
         self.controllerObject.setActivePlayer(activePlayer)
-        #starting listening event
-        self.idle.start()
-        print "idle started"
         self.emit(SIGNAL("newTurn"))
 
-    def waitOtherUserAction(self, event = threading.Event()):
-        event.wait()
+    def waitOtherUserAction(self):
         self.container.update()
         if self.controllerObject.activePlayer != self.controllerObject.userPlayer:
             self.socket.setblocking(0)
@@ -103,13 +96,17 @@ class Client(QObject):
             print "Recieved '%s' from server" % idle
             self.socket.setblocking(1)
             if "turn_ended" in idle:
-                self.emit(SIGNAL("turnEnded()"))
-                event.clear()
+                self.emit(SIGNAL("otherUserFinishedTurn"))
+            elif "game_ended" in idle:
+                #self.emit(SIGNAL("end_the_game"))
+                self.app.closeAllWindows()
 
     def play(self):
         if self.controllerObject.activePlayer !=self.controllerObject.userPlayer:
             print "THAT'S NOT MY TURN NOW"
-            self.idleEvent.set()
+            idle = threading.Thread(target=self.waitOtherUserAction)
+            idle.start()
+            print "Idle thread started"
         else: print "IT IS MY TURN"
 
     def handleInsideChangeTurn(self):
@@ -133,20 +130,12 @@ class Client(QObject):
         self.emit(SIGNAL("newTurn"))
 
     def handleOutsideChangeTurn(self):
-        self.idle.join()
         self.makeRemoteMove()
-
-
         x = self.controllerObject.players.index(self.controllerObject.activePlayer)
         self.controllerObject.activePlayer = self.controllerObject.players[(x+1)%3]
-
         self.container.update()
-
         print "New active Player: ", self.controllerObject.activePlayer.id
-
         self.emit(SIGNAL("newTurn"))
-
-
 
     def makeRemoteMove(self):
         self.socket.setblocking(1)
@@ -155,38 +144,31 @@ class Client(QObject):
             newCoord = self.socket.recv(1)
             newCoords.append(int(newCoord))
             print "from makeRemoteMove recieved:", newCoord
-        print "Want to move remotely ", newCoords[0:3], " -> ", newCoords[3:6]
-
+        print "Want to move remotely {0} -> {1}".format(newCoords[0:3], newCoords[3:6])
         src = self.boardInstance.getData(newCoords[0:3])
         dst = self.boardInstance.getData(newCoords[3:6])
-
         self.controllerObject.move(src, dst)
 
-
-        #self.controllerObject.emit(SIGNAL("turnEnded()"))
+    def gameEnded(self):
+        print "Game ended"
+        self.app.closeAllWindows()
 
     def main(self):
+        self.app = QtGui.QApplication(sys.argv)
         self.container = View()
         self.boardInstance = Board()
 
         self.container.bindWith(self.boardInstance)
         self.controllerObject = Controller(self.boardInstance)
         QObject.connect(self.controllerObject, SIGNAL("turnEndedByUser"),self.handleInsideChangeTurn)
-        QObject.connect(self, SIGNAL("turnEnded()"),self.handleOutsideChangeTurn)
-
-
-        ## QObject.connect(self.controllerObject, SIGNAL("turnEnded()"),self.container.update)
+        QObject.connect(self.controllerObject, SIGNAL("changed()"),self.container.update)
 
         self.container.bindWithController(self.controllerObject)
-
-        QObject.connect(self.controllerObject,SIGNAL("changed()"),self.container.update)
-
         self.container.show()
-
         self.setup()
 
+        sys.exit(self.app.exec_())
+
 if __name__ == '__main__':
-    app = QtGui.QApplication(sys.argv)
     program = Client()
     program.main()
-    sys.exit(app.exec_())

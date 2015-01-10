@@ -8,7 +8,7 @@ import socket, sys, time, random, logging , string
 logging.basicConfig(
    level=logging.DEBUG,
    #format='%(asctime)s:%(levelname)s:%(name)s:%(message)s',
-   format='%(asctime)s : %(message)s ',
+   format='%(asctime)s:%(levelname)s:%(message)s ',
    datefmt="%Y-%m-%d %H:%M:%S",
    filename="../out.log",
    filemode='a'
@@ -60,10 +60,11 @@ class Server:
 
             self.clients.append(newClient)
 
-            logging.info( "Connected new client: %s" % name )
-            logging.info( "Client id = %d" % i )
-            logging.info( " address: %s" % addr[0] )
-            logging.info( " port: %d \n" % addr[1] )
+            log_message = "Connected new client: %s. " \
+                          "Client id = %d. " \
+                          " address: %s. " \
+                          " port: %d."% (name,i,addr[0],addr[1])
+            logging.debug(log_message)
 
         listener.close()
 
@@ -75,10 +76,9 @@ class Server:
                 if not each == client:
                     msg = str(client.id) + client.name
                     each.inform(msg)
-                    logging.info( "'%s' sended to %d" % (msg, each.id) )
                     time.sleep(.025)
             each.inform(str(self.activePlayerId))
-            logging.info( "Active player Id  = '%d' sended to %d \n" % (self.activePlayerId, each.id) )
+            logging.debug( "Informed %s (%d) about two other players and who's active player" % (each.name, each.id) )
 
     def informClients(self):
         pass
@@ -104,38 +104,44 @@ class Server:
             for i in xrange(6):
                 newCoord = int(self.clients[self.activePlayerId].socket.recv(1))
                 if i == 0 or i == 3:
-                    newCoord = (newCoord + self.clients[self.activePlayerId].id) % 3
+                    newCoord = (newCoord + self.activePlayerId) % 3
                 newCoords.append(int(newCoord))
-            logging.info(  "Recieved sequence: %d %d %d %d %d %d " % tuple(newCoords) )
+            logging.info(  str("Recieved sequence: {0}".format(newCoords) ))
 
 
             time.sleep(.025)
             for client in self.clients:
-                logging.info(str( "movement info: " + string.join([str(i) for i in newCoords]) + " for player %s (%d)" % (client.name, client.id) ))
                 if client != self.clients[self.activePlayerId]:
-                    for i in xrange(len(newCoords)):
+                    logging.info(str( "movement info: " + string.join([str(i) for i in newCoords]) + " for player %s (%d)" % (client.name, client.id) ))
+                    calcCoords = newCoords[:]
+                    for i in xrange(len(calcCoords)):
                         if i == 0 or i == 3:
-                            newCoords[i] = (newCoords[i] - client.id + 3) % 3
-                        client.inform(str(newCoords[i]))
-                    logging.info( str( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ string.join([str(i) for i in newCoords]) ))
+                            calcCoords[i] = (calcCoords[i] - client.id + 3) % 3
+                        client.inform(str(calcCoords[i]))
+                    logging.info( str( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ string.join([str(i) for i in calcCoords]) ))
 
             self.turnPass()
 
 
     def main(self):
+        logging.info("NEW SESSION STARTED \n")
         try:
             self.waitingClients()
-        except:
-            logging.info( "Connecting with clients failed \n")
+        except BaseException, e:
+            logging.critical( "Connecting with clients failed. Error: %s." % str(e) )
         try:
             self.shoutStart()
-        except:
-            logging.info( "Bad connection \n")
-        #self.play()
+        except BaseException, e:
+            logging.critical( "Bad connection. Error: %s." % str(e) )
         try:
             self.play()
-        except:
-            logging.info( "server.play() crushed \n")
+        except BaseException, e:
+            logging.critical( "server.play() crushed. Error: %s." % str(e) )
+            for each in self.clients:
+                each.inform("game_ended")
+            logging.info("Informed clients about end of the game.")
+
+        logging.info("SESSION ENDED \n")
 
 if __name__ == '__main__':
     program = Server()
