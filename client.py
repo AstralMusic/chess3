@@ -6,7 +6,7 @@ __author__ = "Vladimir Konak"
 import socket, sys, time, threading
 
 from  PyQt4 import QtGui
-from PyQt4.QtCore import QObject, SIGNAL
+from PyQt4.QtCore import QObject, QString, SIGNAL
 
 from view import View
 from board import Board
@@ -27,7 +27,6 @@ class Client(QObject):
         self.idleEvent = threading.Event()
         #connect signals and slots
         QObject.connect(self, SIGNAL("setupSucceed()"),self.connectToServer)
-        QObject.connect(self, SIGNAL("connected()"),self.waitingStart)
         QObject.connect(self, SIGNAL("newTurn"),self.play)
         QObject.connect(self, SIGNAL("otherUserFinishedTurn"),self.handleOutsideChangeTurn)
         QObject.connect(self, SIGNAL("end_the_game"),self.gameEnded)
@@ -37,7 +36,6 @@ class Client(QObject):
             global junk
             self.controllerObject.setUserPlayerName(junk.name)
             self.emit(SIGNAL("setupSucceed()"))
-            del junk
 
         global junk
         junk = SetupBox()
@@ -54,15 +52,26 @@ class Client(QObject):
             print self.controllerObject.userPlayer.name, "  - sended"
             self.socket.send(self.controllerObject.userPlayer.name)
 
-            global junk
-            junk.hide()
-
             number = self.socket.recv(2)
             number = int(number[0])
             self.controllerObject.setUserPlayerId(number)
             print "recieved id = ", number
+            waiting = threading.Thread(target=self.waitingStart)
+            waiting.start()
 
-            self.emit(SIGNAL("connected()"))
+            #AWB - animating "waiting box"
+            def AWB():
+                from time import sleep
+                i = 0
+                text = "Waiting for others"
+                while True:
+                    i += 1
+                    junk.label2.setText(QString(str(text + "."*((i + 1)%6 + 1))))
+                    sleep(0.3)
+            animate = threading.Thread(target=AWB)
+            animate.start()
+
+
         except BaseException, e:
             print "Connection failed. %s" % str(e[0])
 
@@ -80,6 +89,10 @@ class Client(QObject):
         activePlayer = int( msg [0])
         activePlayer = self.controllerObject.getPlayerById(activePlayer)
         self.controllerObject.setActivePlayer(activePlayer)
+
+        global junk
+        junk.close()
+
         self.emit(SIGNAL("newTurn"))
 
     def waitOtherUserAction(self):

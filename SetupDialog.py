@@ -28,14 +28,23 @@ class SetupBox(QWidget):
 
         #PLEASE WAIT message
 
-        self.label2 = QLabel(self)
-        self.label2.setFont(f)
-        self.label2.setText(QString("Waiting other players"))
-        self.label2.setVisible(False)
+        newLabel = QLabel(self)
+        newLabel.setGeometry(0,0,self.width(),self.height())
+        f2 = QFont()
+        f2.setPixelSize(41)
+        newLabel.setFont(f2)
+        #newLabel.setText(QString("Waiting other players"))
+        newLabel.setVisible(False)
+        self.label2= newLabel
 
         QShortcut(QKeySequence("Return"),self).activated.connect(self.button.click)
         self.button.clicked.connect(self.report)
 
     def report(self):
         self.name = self.textBox.text()
+        self.textBox.hide()
+        self.button.hide()
+        self.verticalLayout.removeWidget(self.label)
+        self.label.clear()
+        self.label2.show()
         self.emit(SIGNAL("infoGathered()"))
