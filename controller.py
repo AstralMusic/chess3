@@ -64,7 +64,8 @@ class Controller(QObject):
                 self.boardExample.unselectAll()
                 sender.figure.select()
                 self.squareWithSelectedFigure = sender
-                self.validSquares = self.figuresContainer.showPossibleMoves(sender.figure, self.boardExample, self.activePlayer)
+                self.validSquares = self.figuresContainer.showPossibleMoves\
+                    (sender.figure, self.boardExample, self.activePlayer)
                 self.boardExample.highlight(self.validSquares)
         if sender in self.validSquares:
             self.move(self.squareWithSelectedFigure,sender)
@@ -75,24 +76,20 @@ class Controller(QObject):
         if destination.figure:
             print "DST player was = " ,destination.figure.player.id
             if destination.figure.type == "KING":
+                screamer = destination.figure.player
                 for eachFigure in self.figuresContainer.grid:
                     if eachFigure.player == destination.figure.player:
                         eachFigure.player = source.figure.player
+            else: screamer = None
+        else: screamer = None
 
         srcCoords = self.boardExample.getSquareCoordinates(source)
         dstCoords = self.boardExample.getSquareCoordinates(destination)
         self.movement = srcCoords + dstCoords
 
-        print "SRC player now = " ,source.figure.player.id
+        #print "SRC player now = " ,source.figure.player.id
         destination.figure = source.figure
         source.figure = None
-        print "DST player now = " ,destination.figure.player.id
 
-    """
-    def kill(self, source, destination):
-        if self.boardExample.getData(destination).figure.type == "KING":
-            pass
-        self.move(source, destination)
-
-
-"""
+        if screamer:
+            screamer.emit(SIGNAL("player_lose"))

@@ -18,6 +18,10 @@ class Client:
     def __init__(self, sock, addr):
         self.socket = sock
         self.address = addr
+        self.isAlive = True
+
+    def setKilled(self):
+        self.isAlive = False
 
     def setId(self, Id):
         self.id = Id
@@ -29,7 +33,7 @@ class Client:
         try:
             self.socket.send(msg)
         except BaseException,e:
-            logging.error("Sending data to  %s (%d), because of lost connection with client." % (self.name,self.name))
+            logging.error("Sending data to  %s (%d), because of lost connection with client." % (self.name,self.id))
 
     def __call__(self, *args, **kwargs):
         return self.socket
@@ -84,15 +88,29 @@ class Server:
         logging.info("FINISHED SETUP\n")
 
     def turnPass(self):
-        self.activePlayerId = (self.activePlayerId + 1) % 3
-        logging.info( "Turn passed\n" )
+        if self.clients[(self.activePlayerId + 1) % 3].isAlive:
+            self.activePlayerId = (self.activePlayerId + 1) % 3
+        else: self.activePlayerId = (self.activePlayerId + 2) % 3
+        logging.info( "Turn passed\n")
 
     def play(self):
-        #while not the only king alive
-        end_of_the_game = False
-        while not end_of_the_game:
+        def playersAlive():
+            res = 0
+            for x in self.clients:
+                if x.isAlive: res += 1
+            return  res
+        #while not the only player alive
+        while playersAlive()>1:
             incomingMessage = self.clients[self.activePlayerId].socket.recv(10)
-            logging.info( "'%s' - recived from %s (%d)" % (incomingMessage, self.clients[self.activePlayerId].name , self.activePlayerId) )
+            logging.info( "'%s' - recived from %s (%d)" %
+                          (incomingMessage, self.clients[self.activePlayerId].name , self.activePlayerId) )
+            if "killed" in incomingMessage:
+                loserId = int(incomingMessage[7])
+                self.clients[loserId].setKilled()
+                logging.warning("Player %s (%d) was killed by %s (%d)."\
+                    %(self.clients[loserId].name,loserId,self.clients[self.activePlayerId].name,self.activePlayerId))
+                self.clients[3 - loserId - self.activePlayerId].inform(incomingMessage)
+
             if "turn_ended" in incomingMessage:
                 time.sleep(0.025)
                 for client in self.clients:
@@ -100,27 +118,26 @@ class Server:
                         client.inform("turn_ended")
                         logging.info( "'turn_ended' was sent to %s (%d)" % (client.name , client.id) )
 
-            rcvdCoords = list()
-            for i in xrange(6):
-                rcvdCoord = int(self.clients[self.activePlayerId].socket.recv(1))
-                if i == 0 or i == 3:
-                    rcvdCoord = (rcvdCoord + self.activePlayerId) % 3
-                rcvdCoords.append(int(rcvdCoord))
-            logging.info(  str("Recieved sequence: {0}".format(rcvdCoords) ))
+                rcvdCoords = list()
+                for i in xrange(6):
+                    rcvdCoord = int(self.clients[self.activePlayerId].socket.recv(1))
+                    if i == 0 or i == 3:
+                        rcvdCoord = (rcvdCoord + self.activePlayerId) % 3
+                    rcvdCoords.append(int(rcvdCoord))
+                logging.info(  str("Recieved sequence: {0}".format(rcvdCoords) ))
 
-
-            time.sleep(.025)
-            for client in self.clients:
-                if client != self.clients[self.activePlayerId]:
-                    logging.info(str( "movement info: " + string.join([str(i) for i in rcvdCoords]) + " for player %s (%d)" % (client.name, client.id) ))
-                    newCoords = rcvdCoords[:]
-                    for i in xrange(len(newCoords)):
-                        if i == 0 or i == 3:
-                            newCoords[i] = (newCoords[i] - client.id + 3) % 3
-                        client.inform(str(newCoords[i]))
-                    logging.info( str( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ string.join([str(i) for i in newCoords]) ))
-
-            self.turnPass()
+                time.sleep(.025)
+                for client in self.clients:
+                    if client != self.clients[self.activePlayerId]:
+                        logging.info(str( "movement info: " + string.join([str(i) for i in rcvdCoords]) + " for player %s (%d)" % (client.name, client.id) ))
+                        newCoords = rcvdCoords[:]
+                        for i in xrange(len(newCoords)):
+                            if i == 0 or i == 3:
+                                newCoords[i] = (newCoords[i] - client.id + 3) % 3
+                            client.inform(str(newCoords[i]))
+                        logging.info( str( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ string.join([str(i) for i in newCoords]) ))
+    
+                self.turnPass()
 
 
     def main(self):

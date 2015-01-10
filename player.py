@@ -9,6 +9,8 @@ class Player(QObject):
         super(Player, self).__init__()
         self.setup(onDeskPosition, name)
 
+        self.isAlive = True
+
     def setup(self, onDeskPosition , name):
         self.name = name
         self.id = onDeskPosition
