@@ -2,7 +2,7 @@ __author__ = "Vladimir Konak"
 # -*- coding: utf-8 -*-
 
 from PyQt4.QtCore import QObject, QString
-from PyQt4.QtGui import QApplication
+from PyQt4.QtGui import QApplication, QColor
 
 from figure import Figure
 
@@ -68,6 +68,7 @@ class Figures(QObject):
                     validMoves.append(current)
                     recurs(np,dm,dn)
                 elif current.figure.player != self.activePlayer:
+                    current.highlightColor = QColor(255,0,0)
                     validMoves.append(current)
                 if aa:
                     npAlter = (aa,np[1],np[2])
@@ -76,6 +77,7 @@ class Figures(QObject):
                         validMoves.append(current2)
                         recurs(npAlter,dm,dn)
                     elif current2.figure.player != self.activePlayer:
+                        current2.highlightColor = QColor(255,0,0)
                         validMoves.append(current2)
             except:
                 pass
@@ -89,6 +91,7 @@ class Figures(QObject):
                 if current.isEmpty():
                     validMoves.append(current)
                 elif current.figure.player != self.activePlayer:
+                    current.highlightColor = QColor(255,0,0)
                     validMoves.append(current)
                 if aa:
                     npAlter = (aa,np[1],np[2])
@@ -96,6 +99,7 @@ class Figures(QObject):
                     if current2.isEmpty():
                         validMoves.append(current2)
                     elif current2.figure.player != self.activePlayer:
+                        current2.highlightColor = QColor(255,0,0)
                         validMoves.append(current2)
             except:
                 pass

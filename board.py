@@ -2,6 +2,7 @@
 __author__ = 'Vladimir Konak'
 
 from PyQt4.QtCore import QObject, SIGNAL
+from PyQt4.QtGui import  QColor
 
 from square import Square
 
@@ -36,10 +37,11 @@ class Board(QObject):
                         return (a,b,c)
 
     def unselectAll(self):
-        for a in range(3):
-            for b in range(4):
-                for c in range(8):
+        for a in xrange(3):
+            for b in xrange(4):
+                for c in xrange(8):
                     self.data[a][b][c].isHighlighted = False
+                    self.data[a][b][c].highlightColor = QColor(0,255,0)
                     if not self.data[a][b][c].isEmpty(): self.data[a][b][c].figure.unselect()
 
     def highlight(self, squares):

@@ -74,12 +74,13 @@ class Controller(QObject):
 
     def move(self, source, destination):
         if destination.figure:
-            print "DST player was = " ,destination.figure.player.id
             if destination.figure.type == "KING":
                 screamer = destination.figure.player
                 for eachFigure in self.figuresContainer.grid:
-                    if eachFigure.player == destination.figure.player:
+                    print "this figure is %s and it belongs to %s"%(eachFigure.type, eachFigure.player.name)
+                    if eachFigure.player.id == destination.figure.player.id:
                         eachFigure.player = source.figure.player
+                        print "now this figure is %s and it belongs to %s"%(eachFigure.type, eachFigure.player.name)
             else: screamer = None
         else: screamer = None
 

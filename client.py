@@ -133,7 +133,6 @@ class Client(QObject):
             print "THAT'S NOT MY TURN NOW"
             idle = threading.Thread(target=self.waitOtherUserAction)
             idle.start()
-            print "Idle thread started"
         else: print "IT IS MY TURN"
 
     def changeActivePlayer(self):
@@ -148,15 +147,11 @@ class Client(QObject):
 
         self.socket.send("turn_ended")
         print "Message sended to server = 'turn_ended' "
-        print "Now we send to server this: ", self.controllerObject.movement
         for x in self.controllerObject.movement:
             msg = str(x)
             self.socket.send(msg)
-
-        print "Turn ended"
         self.changeActivePlayer()
         self.container.update()
-        print "New active Player: %d \n"% self.controllerObject.activePlayer.id
 
         self.emit(SIGNAL("newTurn"))
 
@@ -164,7 +159,6 @@ class Client(QObject):
         self.makeRemoteMove()
         self.changeActivePlayer()
         self.container.update()
-        print "New active Player: ", self.controllerObject.activePlayer.id
         self.emit(SIGNAL("newTurn"))
 
     def makeRemoteMove(self):
@@ -173,7 +167,6 @@ class Client(QObject):
         for i in xrange(6):
             newCoord = self.socket.recv(1)
             newCoords.append(int(newCoord))
-        print "Want to move remotely {0} -> {1}".format(newCoords[0:3], newCoords[3:6])
         src = self.boardInstance.getData(newCoords[0:3])
         dst = self.boardInstance.getData(newCoords[3:6])
         self.controllerObject.move(src, dst)
