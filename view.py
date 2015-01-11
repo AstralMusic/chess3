@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 __author__ = 'Vladimir Konak'
 
-from PyQt4.QtCore import *
+from PyQt4.QtCore import QString, QTextCodec, QRect, QPointF
 from PyQt4.QtGui import *
+import default_settings
 
 class View(QWidget):
 
@@ -47,7 +48,7 @@ class View(QWidget):
         for a in range(3):
             for b in range(4):
                 for c in range(8):
-                    current_square = self.boardExample.data[a][b][c]
+                    current_square = self.boardExample.squares[a][b][c]
                     #drawing actual square black or white
                     qpainter_object.setPen(QColor(0,0,0))
                     qpainter_object.setBrush(current_square.color)
@@ -62,7 +63,7 @@ class View(QWidget):
                     if not  current_square.isEmpty():
                         #show selected or nor selected
                         if current_square.figure.isSelected:
-                            qpainter_object.setBrush(QColor(0,0,255))
+                            qpainter_object.setBrush(default_settings.highlight_selected_color)
                             qpainter_object.drawPolygon(QPolygonF(current_square.coords))
 
                         #show figure

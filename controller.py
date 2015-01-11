@@ -3,26 +3,32 @@ __author__ = "Vladimir Konak"
 
 from player import HumanPlayer, NonHumanPlayer
 from figures import Figures
-from PyQt4.QtCore import QObject, SIGNAL, SLOT
+from PyQt4.QtCore import QObject, SIGNAL
 
 class Controller(QObject):
     players = []
     def __init__(self, boardInstance):
         super(Controller, self).__init__()
-        self.boardExample =  boardInstance
-        self.figuresContainer = Figures()
-
+        #creating players
         self.userPlayer = HumanPlayer()
         self.players.append(self.userPlayer)
         self.players.append(NonHumanPlayer(1))
         self.players.append(NonHumanPlayer(2))
+        #bounding with board
+        self.boardExample =  boardInstance
+        #creating container for all figures
+        self.figuresContainer = Figures(boardInstance)
+        #creating figures, without putting them on desk yet
+        self.figuresContainer.createFigures(self.players)
 
         self.activePlayer = None
         self.selectedFigure = None
         self.validSquares = iter([None])
-
-        self.createFigures()
-        #QObject.connect(self, SIGNAL("turnEnded()"),self.turnPass)
+        #connecting each squares with handler of click event
+        for a in xrange(3):
+            for b in xrange(4):
+                for c in xrange(8):
+                    QObject.connect(self.boardExample.squares[a][b][c],SIGNAL("clicked()"),self.handleClick)
 
     def setActivePlayer(self, player):
         self.activePlayer = player
@@ -50,7 +56,7 @@ class Controller(QObject):
             self.figuresContainer.createFiguresForPlayer(each)
             for b in range(4):
                 for c in range(8):
-                    QObject.connect(self.boardExample.data[each.onDeskPosition][b][c],SIGNAL("clicked()"),self.handleClick)
+                    QObject.connect(self.boardExample.squares[each.onDeskPosition][b][c],SIGNAL("clicked()"),self.handleClick)
         self.figuresContainer.putFiguresOnDesk(self.boardExample)
 
     def anySelected(self):
@@ -65,32 +71,39 @@ class Controller(QObject):
                 sender.figure.select()
                 self.squareWithSelectedFigure = sender
                 self.validSquares = self.figuresContainer.showPossibleMoves\
-                    (sender.figure, self.boardExample, self.activePlayer)
+                    (sender.figure, self.activePlayer)
                 self.boardExample.highlight(self.validSquares)
         if sender in self.validSquares:
-            self.move(self.squareWithSelectedFigure,sender)
+            #actually move figures on board
+            #if res == None then nobody is killed
+            #in other case res will get the killed player
+            res = self.move(self.squareWithSelectedFigure,sender)
+            if res: res.emit(SIGNAL("player_lose"))
             self.emit(SIGNAL("turnEndedByUser"))
         self.emit(SIGNAL("changed()"))
 
     def move(self, source, destination):
+        #if it is any figure on destination square
         if destination.figure:
             if destination.figure.type == "KING":
+                #define that this player will emit dieing signal
                 screamer = destination.figure.player
+                #for each figure on board
                 for eachFigure in self.figuresContainer.grid:
-                    print "this figure is %s and it belongs to %s"%(eachFigure.type, eachFigure.player.name)
-                    if eachFigure.player.id == destination.figure.player.id:
+                    #if current figure belongs to player, who was killed
+                    if eachFigure.player == destination.figure.player:
+                        #make this figure belong to player who killed
                         eachFigure.player = source.figure.player
-                        print "now this figure is %s and it belongs to %s"%(eachFigure.type, eachFigure.player.name)
             else: screamer = None
         else: screamer = None
-
+        #self.movement contains info 'boy this move
+        #and will be sent to server
         srcCoords = self.boardExample.getSquareCoordinates(source)
         dstCoords = self.boardExample.getSquareCoordinates(destination)
         self.movement = srcCoords + dstCoords
-
-        #print "SRC player now = " ,source.figure.player.id
+        #applying the move to the board
         destination.figure = source.figure
         source.figure = None
-
-        if screamer:
-            screamer.emit(SIGNAL("player_lose"))
+        #if some player was killed
+        if screamer: return screamer
+        else: return None

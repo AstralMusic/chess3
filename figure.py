@@ -11,10 +11,6 @@ class Figure(QObject):
         self.type = type
         self.player = player
 
-    def __delete__(self, instance):
-        if self.type == "KING":
-            self.emit(SIGNAL("playerLost()"))
-
     def select(self):
         self.isSelected = True
 

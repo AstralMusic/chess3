@@ -4,6 +4,7 @@ __author__ = "Vladimir Konak"
 # __name__ = '__main__'
 
 import socket, sys, time, random, logging , string
+import default_settings
 
 logging.basicConfig(
    level=logging.DEBUG,
@@ -33,17 +34,17 @@ class Client:
         try:
             self.socket.send(msg)
         except BaseException,e:
-            logging.error("Sending data to  %s (%d), because of lost connection with client." % (self.name,self.id))
+            logging.error("Sending data to  %s (%d) failed, because of lost connection with client." % (self.name,self.id))
 
     def __call__(self, *args, **kwargs):
         return self.socket
 
 class Server:
-    default_server_address = "92.113.247.161"
-    default_server_port = 12345
+    default_server_address = default_settings.server_address
+    default_server_port = default_settings.server_port
     def __init__(self):
         self.address = "127.0.0.1"
-        self.port = self.default_server_port
+        self.port = default_settings.server_port
 
     def waitingClients(self):
         listener = socket.socket()
@@ -99,8 +100,10 @@ class Server:
             for x in self.clients:
                 if x.isAlive: res += 1
             return  res
+        winner = loser = None
         #while not the only player alive
-        while playersAlive()>1:
+        GAME_FINISHED = False
+        while not GAME_FINISHED:
             incomingMessage = self.clients[self.activePlayerId].socket.recv(10)
             logging.info( "'%s' - recived from %s (%d)" %
                           (incomingMessage, self.clients[self.activePlayerId].name , self.activePlayerId) )
@@ -110,6 +113,10 @@ class Server:
                 logging.warning("Player %s (%d) was killed by %s (%d)."\
                     %(self.clients[loserId].name,loserId,self.clients[self.activePlayerId].name,self.activePlayerId))
                 self.clients[3 - loserId - self.activePlayerId].inform(incomingMessage)
+                #info for the end of the game
+                if not loser:
+                    loser = loserId
+                else: winner = self.activePlayerId
 
             if "turn_ended" in incomingMessage:
                 time.sleep(0.025)
@@ -136,9 +143,18 @@ class Server:
                                 newCoords[i] = (newCoords[i] - client.id + 3) % 3
                             client.inform(str(newCoords[i]))
                         logging.info( str( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ string.join([str(i) for i in newCoords]) ))
-    
-                self.turnPass()
 
+                logging.info (" playersAlive() returned %d" % playersAlive())
+                if playersAlive() < 1:
+                    GAME_FINISHED = True
+                    break
+                self.turnPass()
+            if GAME_FINISHED:
+                logging.info("Sending to the clients massage about finished game 'finished_g'")
+                for each in self.clients:
+                    each.inform("finished_g")
+                    each.inform(str(winner))
+                    each.inform(str(loser))
 
     def main(self):
         logging.info("NEW SESSION STARTED \n")
@@ -154,9 +170,9 @@ class Server:
             self.play()
         except BaseException, e:
             logging.critical( "server.play() crushed. Error: %s." % str(e) )
+            logging.info("Informing clients about end of the game...")
             for each in self.clients:
-                each.inform("game_ended")
-            logging.info("Informed clients about end of the game.")
+                each.inform("game_abort")
 
         logging.info("SESSION ENDED \n")
 

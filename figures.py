@@ -1,39 +1,39 @@
 __author__ = "Vladimir Konak"
 # -*- coding: utf-8 -*-
-
-from PyQt4.QtCore import QObject, QString
-from PyQt4.QtGui import QApplication, QColor
+from PyQt4.QtCore import QObject
+from PyQt4.QtGui import QApplication
 
 from figure import Figure
+import default_settings
 
 _encoding = QApplication.UnicodeUTF8
 
 
 class Figures(QObject):
-    grid = []
-    def __init__(self):
+    def __init__(self, boardInstance):
         super(Figures, self).__init__()
+        self.boardExample = boardInstance
 
-    def createFiguresForPlayer(self,player):
-
-        self.grid.extend( [Figure(what, player) for what in ["ROOK","ROOK",
+    def createFigures(self,players):
+        self.grid = list()
+        for player in players:
+            self.grid.extend( [Figure(what, player) for what in ["ROOK","ROOK",
                                                        "KNIGHT","KNIGHT",
                                                        "BISHOP","BISHOP",
                                                        "QUEEN","KING"]+["PAWN"]*8 ]
                         )
-
-    def putFiguresOnDesk(self, boardExample):
+        self.putFiguresOnDesk()
+    def putFiguresOnDesk(self):
         i = iter(self.grid)
         for a in range(3):
             p = [0,7,1,6,2,5,3,4]
             for c in range(8):
                 x = i.next()
-                boardExample.data[x.player.onDeskPosition][0][p[c]].figure = x
+                self.boardExample.squares[x.player.onDeskPosition][0][p[c]].figure = x
 
             for j in range(8):
                 x = i.next()
-                boardExample.data[x.player.onDeskPosition][1][j].figure = x
-        self.boardExample = boardExample
+                self.boardExample.squares[x.player.onDeskPosition][1][j].figure = x
 
     def newPosition(self, position = tuple([int,int,int]), m = 0 , n = 0):
         a = position[0]
@@ -50,94 +50,73 @@ class Figures(QObject):
         if newA == newAalter: return (newA, newB, newC)
         else: return (newA,newB,newC,newAalter)
 
-    def showPossibleMoves(self,figure,boardInstance, activePlayer):
+    def showPossibleMoves(self,figure, activePlayer):
         pos =  self.getFigurePosition(figure)
-        a = pos[0]
-        b = pos[1]
-        c = pos[2]
         validMoves = []
         self.activePlayer = activePlayer
-
-        def recurs(position, dm,dn):
+            
+        def checkInDirection(position, dm,dn, recursive = True ):
+            print "checkInDirection() entered"
+            print "nextSq = boardInstance.getSquare({0}), dx = {1} , dy={2}".format(position,dm,dn)
+            coords = self.newPosition(position,dm,dn)
+            print "nextSq = boardInstance.getSquare({0})".format(coords)
             try:
-                np = self.newPosition(position,dm,dn)
-                if len(np)>3: aa = np[3]
-                else: aa = None
-                current = boardInstance.getData(np)
-                if current.isEmpty():
-                    validMoves.append(current)
-                    recurs(np,dm,dn)
-                elif current.figure.player != self.activePlayer:
-                    current.highlightColor = QColor(255,0,0)
-                    validMoves.append(current)
-                if aa:
-                    npAlter = (aa,np[1],np[2])
-                    current2 = boardInstance.getData(npAlter)
-                    if current2.isEmpty():
-                        validMoves.append(current2)
-                        recurs(npAlter,dm,dn)
-                    elif current2.figure.player != self.activePlayer:
-                        current2.highlightColor = QColor(255,0,0)
-                        validMoves.append(current2)
-            except:
-                pass
-
-        def nonrecurs(position,dm , dn):
-            try:
-                np = self.newPosition(position,dm,dn)
-                if len(np)>3: aa = np[3]
-                else: aa = None
-                current = boardInstance.getData(np)
-                if current.isEmpty():
-                    validMoves.append(current)
-                elif current.figure.player != self.activePlayer:
-                    current.highlightColor = QColor(255,0,0)
-                    validMoves.append(current)
-                if aa:
-                    npAlter = (aa,np[1],np[2])
-                    current2 = boardInstance.getData(npAlter)
-                    if current2.isEmpty():
-                        validMoves.append(current2)
-                    elif current2.figure.player != self.activePlayer:
-                        current2.highlightColor = QColor(255,0,0)
-                        validMoves.append(current2)
-            except:
-                pass
+                if not coords: raise BaseException, "newPosition() returnd nothing, because of new coords are out of desk."
+                if len(coords)>3: aa = [coords[0],coords[3]]
+                else: aa = [coords[0]]
+                b = coords[1]
+                c = coords[2]
+                for A in aa:
+                    print "nextSq = boardInstance.getSquare((%d, %d, %d))"% (A,b,c)
+                    nextSq = self.boardExample.getSquare((A,b,c))
+                    if nextSq.isEmpty():
+                        validMoves.append(nextSq)
+                        if recursive: checkInDirection((A,b,c),dm,dn)
+                    elif nextSq.figure.player != self.activePlayer:
+                        nextSq.highlightColor = default_settings.highlight_attack_color
+                        validMoves.append(nextSq)
+            except BaseException, e:
+                print "Error: %s" % e
 
         if figure.type == "PAWN":
-            nonrecurs(pos, 1, 0)#FIX THIS
-            if pos[1]==1 and pos[0]==self.activePlayer.onDeskPosition:
-                nonrecurs(pos, 2, 0)#AND THIS
+            nextPos = self.newPosition(pos, 1, 0)
+            nextSq = self.boardExample.getSquare(nextPos)
+            if nextSq.isEmpty():
+                validMoves.append(nextSq)
+                if pos[1]==1 and pos[0]==self.activePlayer.onDeskPosition:
+                    sq = self.boardExample.getSquare(self.newPosition(pos,2,0))
+                    if sq.isEmpty():
+                        validMoves.append(sq)
             for j in [-1,1]:
                 nextPos = self.newPosition(pos, 1, j)
                 if not nextPos: continue
-                if not boardInstance.getData(nextPos).isEmpty():
-                    nonrecurs(pos, 1, j)
+                if not self.boardExample.getSquare(nextPos).isEmpty():
+                    checkInDirection(pos, 1, j, recursive = False)
         elif figure.type == "ROOK":
-            recurs(pos,1,0)
-            recurs(pos,0,1)
-            recurs(pos,-1,0)
-            recurs(pos,0,-1)
+            checkInDirection(pos,1,0)
+            checkInDirection(pos,0,1)
+            checkInDirection(pos,-1,0)
+            checkInDirection(pos,0,-1)
         elif figure.type == "KNIGHT":
             for i in [-2,-1,1,2]:
                 for j in [-2,-1,1,2]:
                     if abs(i)==abs(j): continue
-                    nonrecurs(pos, i , j)
+                    checkInDirection(pos, i , j, recursive = False)
         elif figure.type == "BISHOP":
-            recurs(pos,1,1)
-            recurs(pos,-1,1)
-            recurs(pos,1,-1)
-            recurs(pos,-1,-1)
+            checkInDirection(pos,1,1)
+            checkInDirection(pos,-1,1)
+            checkInDirection(pos,1,-1)
+            checkInDirection(pos,-1,-1)
         elif figure.type == "QUEEN":
             for i in [-1,0,1]:
                 for j in [-1,0,1]:
                     if i==j==0: continue
-                    else: recurs(pos, i, j)
+                    else: checkInDirection(pos, i, j)
         elif figure.type == "KING":
             for i in [-1,0,1]:
                 for j in [-1,0,1]:
                     if i==j==0: continue
-                    else: nonrecurs(pos, i, j)
+                    else: checkInDirection(pos, i, j, recursive = False)
 
         return validMoves
 
@@ -145,4 +124,4 @@ class Figures(QObject):
         for a in range(3):
             for b in range(4):
                 for c in range(8):
-                    if self.boardExample.data[a][b][c].figure == figure: return (a,b,c)
+                    if self.boardExample.squares[a][b][c].figure == figure: return (a,b,c)

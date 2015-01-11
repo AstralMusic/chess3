@@ -2,20 +2,20 @@ __author__ = 'Vladimir Konak'
 
 from math import sin, cos, radians
 
-from PyQt4.QtCore import QPointF, QRect, Qt, SIGNAL
-from PyQt4.QtGui import QColor, QAbstractButton,\
-                QApplication,QPolygonF, QPainter
+from PyQt4.QtCore import QPointF, Qt
+from PyQt4.QtGui import QAbstractButton, QApplication,QPolygonF
+import default_settings
 
-black = QColor(0,0,0)
-white = QColor(255,255,255)
+black = default_settings.black
+white = default_settings.white
 
 class Square(QAbstractButton):
     def __init__(self):
         self.figure = None
         self.isSelected = False
-        self.color = QColor()
+        self.color = None
         self.isHighlighted = False
-        self.highlightColor = QColor(0,255,0)
+        self.highlightColor = default_settings.highlight_color
 
     def createButton(self, central_widget):
         super(Square, self).__init__(central_widget)
@@ -76,6 +76,3 @@ class Square(QAbstractButton):
     def isEmpty(self):
         if self.figure == None : return True
         else: return False
-
-    #def __repr__(self):
-        #return str(self.color.red())

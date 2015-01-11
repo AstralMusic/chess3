@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 __author__ = "Vladimir Konak"
 #__name__ = '__main__'
-
-
 import socket, sys, time, threading
 
 from  PyQt4 import QtGui
 from PyQt4.QtCore import QObject, QString, SIGNAL
+import default_settings
 
 from view import View
 from board import Board
@@ -14,14 +13,11 @@ from controller import Controller
 from SetupDialog import SetupBox
 
 class Client(QObject):
-    default_server_address = "92.113.247.161"
-    default_server_port = 12345
-
     def __init__(self):
         super(Client, self).__init__()
         self.socket = socket.socket()
         self.server_addr = "127.0.0.1"
-        self.server_port = self.default_server_port
+        self.server_port = default_settings.server_port
 
         #thread for listening server
         self.idleEvent = threading.Event()
@@ -43,6 +39,17 @@ class Client(QObject):
 
     def setup(self):
         self.showSetupDialog()
+
+        #I guess it pretty clear
+        theEndMessage = QtGui.QLabel(self.container)
+        f = QtGui.QFont()
+        f.setPixelSize(43)
+        theEndMessage.setFont(f)
+        theEndMessage.setGeometry(200,300,400,200)
+        theEndMessage.setAutoFillBackground(True)
+        self.theEndMessage = theEndMessage
+
+
 
     def connectToServer(self):
         #send name and save own id
@@ -103,7 +110,7 @@ class Client(QObject):
 
         self.emit(SIGNAL("newTurn"))
 
-    def waitOtherUserAction(self):
+    def waitServerInstructions(self):
         self.container.update()
         if self.controllerObject.activePlayer != self.controllerObject.userPlayer:
             self.socket.setblocking(0)
@@ -121,17 +128,23 @@ class Client(QObject):
             elif "killed" in server_msg:
                 loserId = int(server_msg[7])
                 self.controllerObject.players[loserId].isAlive = False
-                #self.emit(SIGNAL("newTurn"))
-                #self.emit(SIGNAL("otherUserFinishedTurn"))
-                self.waitOtherUserAction()
-            elif "game_ended" in server_msg:
+                self.waitServerInstructions()
+            elif "finished_g" in server_msg:
+                server_msg = self.socket.recv(1)
+                winner = self.controllerObject.players[int(server_msg)].name
+                server_msg = self.socket.recv(1)
+                loser = self.controllerObject.players[int(server_msg)].name
+                self.controllerObject.activePlayer = None
+                self.theEndMessage.setText(QString("Winner: %s\n Loser: %s" % (winner, loser)))
+                self.theEndMessage.show()
+            elif "game_abort" in server_msg:
                 #self.emit(SIGNAL("end_the_game"))
                 self.app.closeAllWindows()
 
     def play(self):
         if self.controllerObject.activePlayer !=self.controllerObject.userPlayer:
             print "THAT'S NOT MY TURN NOW"
-            idle = threading.Thread(target=self.waitOtherUserAction)
+            idle = threading.Thread(target=self.waitServerInstructions)
             idle.start()
         else: print "IT IS MY TURN"
 
@@ -161,14 +174,18 @@ class Client(QObject):
         self.container.update()
         self.emit(SIGNAL("newTurn"))
 
+    #get information of the move, made by remote player
     def makeRemoteMove(self):
         self.socket.setblocking(1)
         newCoords = list()
+        #take six numbers
         for i in xrange(6):
             newCoord = self.socket.recv(1)
             newCoords.append(int(newCoord))
-        src = self.boardInstance.getData(newCoords[0:3])
-        dst = self.boardInstance.getData(newCoords[3:6])
+        src = self.boardInstance.getSquare(newCoords[0:3])
+        dst = self.boardInstance.getSquare(newCoords[3:6])
+        #apply it to the board instance
+        #just moves figures on board
         self.controllerObject.move(src, dst)
 
     def gameEnded(self):

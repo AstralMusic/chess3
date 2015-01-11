@@ -1,7 +1,7 @@
 __author__ = 'Vladimir Konak'
 
 from PyQt4.QtCore import QObject, QString
-from PyQt4.QtGui import  QColor
+import  default_settings
 
 
 class Player(QObject):
@@ -15,12 +15,12 @@ class Player(QObject):
         self.name = name
         self.id = onDeskPosition
         self.onDeskPosition = onDeskPosition
-        self.color = QColor()
+        self.color = default_settings.black
 
     def setColor(self):
-        if self.id == 0: self.color = QColor(120,120,0)
-        if self.id == 1: self.color = QColor(120,120,120)
-        if self.id == 2: self.color = QColor(0,120,120)
+        if self.id == 0: self.color = default_settings.player_color_0
+        if self.id == 1: self.color = default_settings.player_color_1
+        if self.id == 2: self.color = default_settings.player_color_2
 
 class HumanPlayer(Player):
     pass
