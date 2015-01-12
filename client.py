@@ -64,6 +64,7 @@ class Client(QObject):
             number = int(number[0])
             self.controllerObject.setUserPlayerId(number)
             print "recieved id = ", number
+            self.controllerObject.emit(SIGNAL("changed()"))
             waiting = threading.Thread(target=self.waitingStart)
             waiting.start()
 
@@ -152,7 +153,9 @@ class Client(QObject):
         x = self.controllerObject.players.index(self.controllerObject.activePlayer)
         if self.controllerObject.players[(x+1)%3].isAlive:
             self.controllerObject.activePlayer = self.controllerObject.players[(x+1)%3]
-        else: self.controllerObject.activePlayer = self.controllerObject.players[(x+2)%3]
+        elif self.controllerObject.players[(x+2)%3].isAlive:
+            self.controllerObject.activePlayer = self.controllerObject.players[(x+2)%3]
+        else: self.waitServerInstructions()
 
     def handleInsideChangeTurn(self):
         self.controllerObject.validSquares = []
@@ -188,13 +191,13 @@ class Client(QObject):
         #just moves figures on board
         self.controllerObject.move(src, dst)
 
+    #in case of abortion
     def gameEnded(self):
         print "Game ended"
         self.app.closeAllWindows()
 
-    def playerLost(self):
+    def informServerAboutLoserPlayer(self):
         loser = QObject.sender(QObject())
-        loser.isAlive = False
         i = loser.id
         self.socket.send("killed_%dpl" % i)
         print "Message sended to server = 'killed_%dpl'. " % i
@@ -211,7 +214,7 @@ class Client(QObject):
         QObject.connect(self.controllerObject, SIGNAL("turnEndedByUser"),self.handleInsideChangeTurn)
         QObject.connect(self.controllerObject, SIGNAL("changed()"),self.container.update)
         for i in xrange(3):
-            QObject.connect(self.controllerObject.players[i],SIGNAL("player_lose"), self.playerLost)
+            QObject.connect(self.controllerObject.players[i],SIGNAL("player_lose"), self.informServerAboutLoserPlayer)
 
         self.container.bindWithController(self.controllerObject)
         self.container.show()

@@ -1,8 +1,6 @@
 __author__ = 'Vladimir Konak'
 # -*- coding: utf-8 -*-
-
-
-from PyQt4.QtCore import QObject, QString, SIGNAL
+from PyQt4.QtCore import QObject, QString
 
 class Figure(QObject):
     def __init__(self, type, player):
@@ -30,4 +28,3 @@ class Figure(QObject):
             return QString("♛")
         elif self.type == "KING":
             return QString("♚")
-

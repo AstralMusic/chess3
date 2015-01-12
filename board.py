@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = 'Vladimir Konak'
 
-from PyQt4.QtCore import QObject, SIGNAL
+from PyQt4.QtCore import QObject
 
 from square import Square
 import default_settings

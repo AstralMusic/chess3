@@ -15,7 +15,7 @@ class Player(QObject):
         self.name = name
         self.id = onDeskPosition
         self.onDeskPosition = onDeskPosition
-        self.color = default_settings.black
+        self.color = default_settings.grey
 
     def setColor(self):
         if self.id == 0: self.color = default_settings.player_color_0

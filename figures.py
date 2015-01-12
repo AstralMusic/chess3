@@ -16,12 +16,9 @@ class Figures(QObject):
 
     def createFigures(self,players):
         self.grid = list()
+        x = ["ROOK","ROOK",  "KNIGHT","KNIGHT","BISHOP","BISHOP","QUEEN","KING"]+["PAWN"]*8
         for player in players:
-            self.grid.extend( [Figure(what, player) for what in ["ROOK","ROOK",
-                                                       "KNIGHT","KNIGHT",
-                                                       "BISHOP","BISHOP",
-                                                       "QUEEN","KING"]+["PAWN"]*8 ]
-                        )
+            self.grid.extend( [Figure(what, player) for what in x])
         self.putFiguresOnDesk()
     def putFiguresOnDesk(self):
         i = iter(self.grid)
@@ -39,16 +36,18 @@ class Figures(QObject):
         a = position[0]
         b = position[1]
         c = position[2]
-        if not a == self.activePlayer.onDeskPosition:
+        if a != self.activePlayer.onDeskPosition:
             m = -m
             n = -n
-        newA = ((1 +c/4)*((b+m)/4)+a)%3
-        newAalter = ((1 +(c+n)/4)*((b+m)/4)+a)%3
-        newB = (b+m)/4*(7-b-m) + (1 - (b+m)/4)*(b+m)
-        newC = (c+n)*(1-(b+m)/4) + (b+m)/4*(7-c-n)
+        #CTE - "crossed the edge" flag. can be only 0 or 1
+        CTE = (b+m)/4
+        newA = ((1 +c/4)*CTE+a)%3
+        newA2 = ((1 +(c+n)/4)*(CTE)+a)%3
+        newB = CTE*(7-b-m) + (1 - CTE)*(b+m)
+        newC = (c+n)*(1-CTE) + CTE*(7-c-n)
         if newC<0 or newC>7: return
-        if newA == newAalter: return (newA, newB, newC)
-        else: return (newA,newB,newC,newAalter)
+        if newA == newA2: return (newA, newB, newC)
+        return (newA,newB,newC,newA2)
 
     def showPossibleMoves(self,figure, activePlayer):
         pos =  self.getFigurePosition(figure)
@@ -70,6 +69,7 @@ class Figures(QObject):
                     print "nextSq = boardInstance.getSquare((%d, %d, %d))"% (A,b,c)
                     nextSq = self.boardExample.getSquare((A,b,c))
                     if nextSq.isEmpty():
+                        if nextSq in validMoves: dm = -dm ; dn = -dn
                         validMoves.append(nextSq)
                         if recursive: checkInDirection((A,b,c),dm,dn)
                     elif nextSq.figure.player != self.activePlayer:

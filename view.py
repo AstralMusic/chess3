@@ -15,9 +15,11 @@ class View(QWidget):
 
     def initUI(self):
 
-        self.setGeometry(200, 200, 800, 800)
+        width = default_settings.window_width
+        height = default_settings.window_height
+        self.setGeometry(200, 200, width, height)
         self.setWindowTitle('Chess')
-        self.setFixedSize(800,800)
+        self.setFixedSize(width,height)
 
         self.menubar = QMenuBar(self)
         self.menubar.setGeometry(QRect(0, 0, self.geometry().width(), 30))
@@ -76,10 +78,9 @@ class View(QWidget):
 
         #show which player is active and names
         if self.controllerExample.activePlayer:
-            qpainter_object.drawText(50,100,QString(self.controllerExample.players[1].name))
-            qpainter_object.drawText(600,100,QString(self.controllerExample.players[2].name))
-            qpainter_object.drawText(600,600,QString(self.controllerExample.players[0].name))
-
-            qpainter_object.translate(400,400)
+            qpainter_object.translate(self.width()/2,self.height()/2)
+            qpainter_object.drawText(-300,-300,QString(self.controllerExample.players[1].name))
+            qpainter_object.drawText(200,-300,QString(self.controllerExample.players[2].name))
+            qpainter_object.drawText(150,350,QString(self.controllerExample.players[0].name))
             qpainter_object.rotate(self.controllerExample.activePlayer.onDeskPosition * 120.)
             qpainter_object.drawPolygon(QPolygonF([QPointF(-150,350),QPointF(150,350), QPointF(0,300) ]))

@@ -40,8 +40,6 @@ class Client:
         return self.socket
 
 class Server:
-    default_server_address = default_settings.server_address
-    default_server_port = default_settings.server_port
     def __init__(self):
         self.address = "127.0.0.1"
         self.port = default_settings.server_port
@@ -91,7 +89,8 @@ class Server:
     def turnPass(self):
         if self.clients[(self.activePlayerId + 1) % 3].isAlive:
             self.activePlayerId = (self.activePlayerId + 1) % 3
-        else: self.activePlayerId = (self.activePlayerId + 2) % 3
+        elif self.clients[(self.activePlayerId + 2) % 3].isAlive:
+            self.activePlayerId = (self.activePlayerId + 2) % 3
         logging.info( "Turn passed\n")
 
     def play(self):
@@ -107,6 +106,10 @@ class Server:
             incomingMessage = self.clients[self.activePlayerId].socket.recv(10)
             logging.info( "'%s' - recived from %s (%d)" %
                           (incomingMessage, self.clients[self.activePlayerId].name , self.activePlayerId) )
+            if incomingMessage == '':
+                self.clients[self.activePlayerId].socket.close()
+                raise BaseException, "Client #%d got crazy, so I closed his socket and aborted session." %self.activePlayerId
+
             if "killed" in incomingMessage:
                 loserId = int(incomingMessage[7])
                 self.clients[loserId].setKilled()
@@ -145,16 +148,17 @@ class Server:
                         logging.info( str( "Sended that coords to %s ( %d ) : " % (client.name, client.id)+ string.join([str(i) for i in newCoords]) ))
 
                 logging.info (" playersAlive() returned %d" % playersAlive())
-                if playersAlive() < 1:
+                if playersAlive() < 2:
                     GAME_FINISHED = True
-                    break
+                    #break
                 self.turnPass()
-            if GAME_FINISHED:
-                logging.info("Sending to the clients massage about finished game 'finished_g'")
-                for each in self.clients:
-                    each.inform("finished_g")
-                    each.inform(str(winner))
-                    each.inform(str(loser))
+        if GAME_FINISHED:
+            logging.info("Sending to the clients message about finished game 'finished_g'")
+            for each in self.clients:
+                each.inform("finished_g")
+                each.inform(str(winner))
+                each.inform(str(loser))
+
 
     def main(self):
         logging.info("NEW SESSION STARTED \n")

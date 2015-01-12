@@ -57,7 +57,7 @@ class Controller(QObject):
             for b in range(4):
                 for c in range(8):
                     QObject.connect(self.boardExample.squares[each.onDeskPosition][b][c],SIGNAL("clicked()"),self.handleClick)
-        self.figuresContainer.putFiguresOnDesk(self.boardExample)
+        self.figuresContainer.putFiguresOnDesk()
 
     def anySelected(self):
         if self.selectedFigure: return True
@@ -87,15 +87,17 @@ class Controller(QObject):
         if destination.figure:
             if destination.figure.type == "KING":
                 #define that this player will emit dieing signal
-                screamer = destination.figure.player
+                loser = destination.figure.player
+                #exclude him from alive players
+                loser.isAlive = False
                 #for each figure on board
                 for eachFigure in self.figuresContainer.grid:
                     #if current figure belongs to player, who was killed
-                    if eachFigure.player == destination.figure.player:
+                    if eachFigure.player == loser:
                         #make this figure belong to player who killed
                         eachFigure.player = source.figure.player
-            else: screamer = None
-        else: screamer = None
+            else: loser = None
+        else: loser = None
         #self.movement contains info 'boy this move
         #and will be sent to server
         srcCoords = self.boardExample.getSquareCoordinates(source)
@@ -104,6 +106,5 @@ class Controller(QObject):
         #applying the move to the board
         destination.figure = source.figure
         source.figure = None
-        #if some player was killed
-        if screamer: return screamer
-        else: return None
+        #if some player was killed, return his instance
+        return loser
