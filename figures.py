@@ -13,13 +13,12 @@ class Figures(QObject):
     def __init__(self, boardInstance):
         super(Figures, self).__init__()
         self.boardExample = boardInstance
-
-    def createFigures(self,players):
         self.grid = list()
+
+    def createFigures(self, player):
         x = ["ROOK","ROOK",  "KNIGHT","KNIGHT","BISHOP","BISHOP","QUEEN","KING"]+["PAWN"]*8
-        for player in players:
-            self.grid.extend( [Figure(what, player) for what in x])
-        self.putFiguresOnDesk()
+        self.grid.extend( [Figure(what, player) for what in x])
+
     def putFiguresOnDesk(self):
         i = iter(self.grid)
         for a in range(3):
@@ -66,8 +65,8 @@ class Figures(QObject):
                 b = coords[1]
                 c = coords[2]
                 for A in aa:
-                    print "nextSq = boardInstance.getSquare((%d, %d, %d))"% (A,b,c)
-                    nextSq = self.boardExample.getSquare((A,b,c))
+                    print "nextSq = boardInstance.getSquare(%d, %d, %d)"% (A,b,c)
+                    nextSq = self.boardExample.getSquare(A,b,c)
                     if nextSq.isEmpty():
                         if nextSq in validMoves: dm = -dm ; dn = -dn
                         validMoves.append(nextSq)

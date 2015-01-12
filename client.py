@@ -29,7 +29,7 @@ class Client(QObject):
 
     def showSetupDialog(self):
         def takeInfo():
-            self.controllerObject.setUserPlayerName(junk.name)
+            self.controllerObject.players[self.controllerObject.userPlayer.onDeskPosition].setName(junk.name)
             self.emit(SIGNAL("setupSucceed()"))
 
         global junk
@@ -62,7 +62,7 @@ class Client(QObject):
 
             number = self.socket.recv(2)
             number = int(number[0])
-            self.controllerObject.setUserPlayerId(number)
+            self.controllerObject.players[0].setId(number)
             print "recieved id = ", number
             self.controllerObject.emit(SIGNAL("changed()"))
             waiting = threading.Thread(target=self.waitingStart)
@@ -97,8 +97,8 @@ class Client(QObject):
             playerId = int(msg[0])
             odp = (playerId - self.controllerObject.userPlayer.id+3)%3
             playerName = msg[1::]
-            self.controllerObject.setRemotePlayerId(odp,playerId)
-            self.controllerObject.setRemotePlayerName(odp,playerName)
+            self.controllerObject.players[odp].setId(playerId)
+            self.controllerObject.players[odp].setName(playerName)
         #get info 'bout active player
         msg = self.socket.recv(2)
         activePlayer = int( msg [0])
@@ -145,17 +145,23 @@ class Client(QObject):
     def play(self):
         if self.controllerObject.activePlayer !=self.controllerObject.userPlayer:
             print "THAT'S NOT MY TURN NOW"
+            #and wait for server's commands
             idle = threading.Thread(target=self.waitServerInstructions)
             idle.start()
-        else: print "IT IS MY TURN"
+        else: print "IT IS MY TURN" #and do nothing until player clicks on some square
 
     def changeActivePlayer(self):
         x = self.controllerObject.players.index(self.controllerObject.activePlayer)
         if self.controllerObject.players[(x+1)%3].isAlive:
+            self.controllerObject.activePlayer.isActive = False
             self.controllerObject.activePlayer = self.controllerObject.players[(x+1)%3]
+            self.controllerObject.activePlayer.isActive = True
         elif self.controllerObject.players[(x+2)%3].isAlive:
+            self.controllerObject.activePlayer.isActive = False
             self.controllerObject.activePlayer = self.controllerObject.players[(x+2)%3]
+            self.controllerObject.activePlayer.isActive = True
         else: self.waitServerInstructions()
+
 
     def handleInsideChangeTurn(self):
         self.controllerObject.validSquares = []
@@ -163,7 +169,7 @@ class Client(QObject):
 
         self.socket.send("turn_ended")
         print "Message sended to server = 'turn_ended' "
-        for x in self.controllerObject.movement:
+        for x in self.controllerObject.figuresContainer.movement:
             msg = str(x)
             self.socket.send(msg)
         self.changeActivePlayer()
@@ -194,6 +200,7 @@ class Client(QObject):
     #in case of abortion
     def gameEnded(self):
         print "Game ended"
+        self.socket.close()
         self.app.closeAllWindows()
 
     def informServerAboutLoserPlayer(self):
@@ -203,18 +210,19 @@ class Client(QObject):
         print "Message sended to server = 'killed_%dpl'. " % i
         time.sleep(0.025)
 
-
     def main(self):
         self.app = QtGui.QApplication(sys.argv)
         self.container = View()
         self.boardInstance = Board()
 
-        self.container.bindWith(self.boardInstance)
+        self.container.bindWithBoard(self.boardInstance)
         self.controllerObject = Controller(self.boardInstance)
-        QObject.connect(self.controllerObject, SIGNAL("turnEndedByUser"),self.handleInsideChangeTurn)
-        QObject.connect(self.controllerObject, SIGNAL("changed()"),self.container.update)
-        for i in xrange(3):
-            QObject.connect(self.controllerObject.players[i],SIGNAL("player_lose"), self.informServerAboutLoserPlayer)
+        #QObject.connect(self.controllerObject, SIGNAL("turnEndedByUser"),self.handleInsideChangeTurn)
+        #Following should work:
+        QObject.connect(self.controllerObject.userPlayer, SIGNAL("turnEndedByUser"),self.handleInsideChangeTurn)
+        QObject.connect(self.boardInstance, SIGNAL("changed()"),self.container.update)
+        #for i in xrange(3):
+            #QObject.connect(self.controllerObject.players[i],SIGNAL("player_lose"), self.informServerAboutLoserPlayer)
 
         self.container.bindWithController(self.controllerObject)
         self.container.show()

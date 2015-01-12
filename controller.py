@@ -1,7 +1,7 @@
-__author__ = "Vladimir Konak"
 # -*- coding: utf-8 -*-
+__author__ = "Vladimir Konak"
 
-from player import HumanPlayer, NonHumanPlayer
+from player import UserPlayer, RemotePlayer
 from figures import Figures
 from PyQt4.QtCore import QObject, SIGNAL
 
@@ -9,17 +9,24 @@ class Controller(QObject):
     players = []
     def __init__(self, boardInstance):
         super(Controller, self).__init__()
-        #creating players
-        self.userPlayer = HumanPlayer()
-        self.players.append(self.userPlayer)
-        self.players.append(NonHumanPlayer(1))
-        self.players.append(NonHumanPlayer(2))
         #bounding with board
         self.boardExample =  boardInstance
         #creating container for all figures
         self.figuresContainer = Figures(boardInstance)
+
+        #creating players
+        self.userPlayer = UserPlayer()
+        self.players.append(self.userPlayer)
+        self.players.append(RemotePlayer(onDeskPosition = 1))
+        self.players.append(RemotePlayer(onDeskPosition = 2))
+
+        #bind with figures
+        for player in self.players:
+            player.createFigures(self.figuresContainer)
+        self.figuresContainer.putFiguresOnDesk()
+
         #creating figures, without putting them on desk yet
-        self.figuresContainer.createFigures(self.players)
+        #self.figuresContainer.createFigures(self.players)
 
         self.activePlayer = None
         self.selectedFigure = None
@@ -28,57 +35,39 @@ class Controller(QObject):
         for a in xrange(3):
             for b in xrange(4):
                 for c in xrange(8):
-                    QObject.connect(self.boardExample.squares[a][b][c],SIGNAL("clicked()"),self.handleClick)
+                    #QObject.connect(self.boardExample.getSquare(a,b,c).button,SIGNAL("clicked()"),self.handleClick)
+                    #when user player is ready to handle event on the board uncomment following and comment previous
+                    QObject.connect(self.boardExample.getSquare(a,b,c).button,SIGNAL("clicked()"),self.userPlayer.handleClick)
 
     def setActivePlayer(self, player):
         self.activePlayer = player
+        self.activePlayer.isActive = True
         self.emit(SIGNAL("changed()"))
 
     def getPlayerById(self, Id):
         for i in self.players:
             if i.id == Id: return i
 
-    def setUserPlayerName(self, playerName):
-        self.userPlayer.name = playerName
-    def setUserPlayerId(self, playerId):
-        self.userPlayer.id = playerId
-        self.userPlayer.setColor()
-
-    def setRemotePlayerName(self, onDeskPosition, playerName):
-        self.players[onDeskPosition].name = playerName
-    def setRemotePlayerId(self, onDeskPosition, playerId):
-        self.players[onDeskPosition].id = playerId
-        self.players[onDeskPosition].setColor()
-
-
-    def createFigures(self):
-        for each in self.players:
-            self.figuresContainer.createFiguresForPlayer(each)
-            for b in range(4):
-                for c in range(8):
-                    QObject.connect(self.boardExample.squares[each.onDeskPosition][b][c],SIGNAL("clicked()"),self.handleClick)
-        self.figuresContainer.putFiguresOnDesk()
-
-    def anySelected(self):
-        if self.selectedFigure: return True
-        else: return False
+    #def anySelected(self):
+        #if self.selectedFigure: return True
+        #else: return False
 
     def handleClick(self):
         sender =  QObject.sender(QObject())
-        if not sender.isEmpty():
-            if sender.figure.player == self.activePlayer and self.activePlayer == self.userPlayer:
+        if not sender.square.isEmpty():
+            if sender.square.figure.player == self.activePlayer and self.activePlayer == self.userPlayer:
                 self.boardExample.unselectAll()
-                sender.figure.select()
-                self.squareWithSelectedFigure = sender
+                sender.square.figure.select()
+                self.squareWithSelectedFigure = sender.square
                 self.validSquares = self.figuresContainer.showPossibleMoves\
-                    (sender.figure, self.activePlayer)
+                    (sender.square.figure, self.activePlayer)
                 self.boardExample.highlight(self.validSquares)
-        if sender in self.validSquares:
+        if sender.square in self.validSquares:
             #actually move figures on board
             #if res == None then nobody is killed
             #in other case res will get the killed player
-            res = self.move(self.squareWithSelectedFigure,sender)
-            if res: res.emit(SIGNAL("player_lose"))
+            res = self.move(self.squareWithSelectedFigure,sender.square)
+            #if res: res.emit(SIGNAL("player_lose"))
             self.emit(SIGNAL("turnEndedByUser"))
         self.emit(SIGNAL("changed()"))
 

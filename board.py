@@ -12,22 +12,23 @@ class Board(QObject):
         super(Board, self).__init__()
         self.squares = []
 
-    def createSquare(self, containerWidget):
-        temp_square = Square()
-        temp_square.createButton(containerWidget)
-
-    def createPlayground(self, containerWidget):
+    def createPlayground(self, centralWidget):
         def square_init (a,b,c):
             temp_square = Square()
-            temp_square.createButton(containerWidget)
-            temp_square.setup(a,b,c)
+            temp_square.createButton(centralWidget)
+            temp_square.button.setup(a,b,c)
             return temp_square
+        self.squares = [[[ square_init(i,j,k) for k in xrange(8)] for j in xrange(4)] for i in xrange(3)]
 
-        self.squares = [[[ square_init (i,j,k) for k in xrange(8)] for j in xrange(4)] for i in xrange(3)]
-
-
-    def getSquare(self, t = (0,0,0)):
-        return self.squares[t[0]][t[1]][t[2]]
+    def getSquare(self, *args):
+        if type(args[0]) == tuple or type(args[0]) == list:
+            t = args[0]
+            return self.squares[t[0]][t[1]][t[2]]
+        else:
+            a = args[0]
+            b = args[1]
+            c = args[2]
+            return self.squares[a][b][c]
 
     def getSquareCoordinates(self,square):
         for a in xrange(3):
