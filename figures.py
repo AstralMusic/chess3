@@ -41,7 +41,7 @@ class Figures(QObject):
         #CTE - "crossed the edge" flag. can be only 0 or 1
         CTE = (b+m)/4
         newA = ((1 +c/4)*CTE+a)%3
-        newA2 = ((1 +(c+n)/4)*(CTE)+a)%3
+        newA2 = ((1 +(c+n)/4)*CTE+a)%3
         newB = CTE*(7-b-m) + (1 - CTE)*(b+m)
         newC = (c+n)*(1-CTE) + CTE*(7-c-n)
         if newC<0 or newC>7: return
@@ -53,11 +53,8 @@ class Figures(QObject):
         validMoves = []
         self.activePlayer = activePlayer
             
-        def checkInDirection(position, dm,dn, recursive = True ):
-            print "checkInDirection() entered"
-            print "nextSq = boardInstance.getSquare({0}), dx = {1} , dy={2}".format(position,dm,dn)
+        def checkInDirection(position, dm,dn, recursive = True , previous = (0,0,0)):
             coords = self.newPosition(position,dm,dn)
-            print "nextSq = boardInstance.getSquare({0})".format(coords)
             try:
                 if not coords: raise BaseException, "newPosition() returnd nothing, because of new coords are out of desk."
                 if len(coords)>3: aa = [coords[0],coords[3]]
@@ -65,12 +62,13 @@ class Figures(QObject):
                 b = coords[1]
                 c = coords[2]
                 for A in aa:
-                    print "nextSq = boardInstance.getSquare(%d, %d, %d)"% (A,b,c)
                     nextSq = self.boardExample.getSquare(A,b,c)
                     if nextSq.isEmpty():
-                        if nextSq in validMoves: dm = -dm ; dn = -dn
-                        validMoves.append(nextSq)
-                        if recursive: checkInDirection((A,b,c),dm,dn)
+                        prevSq = self.boardExample.getSquare(previous)
+                        if nextSq == prevSq:
+                            checkInDirection(position,-dm,-dn, previous = position)
+                        else: validMoves.append(nextSq)
+                        if recursive: checkInDirection((A,b,c),dm,dn, previous = position)
                     elif nextSq.figure.player != self.activePlayer:
                         nextSq.highlightColor = default_settings.highlight_attack_color
                         validMoves.append(nextSq)
@@ -82,7 +80,7 @@ class Figures(QObject):
             nextSq = self.boardExample.getSquare(nextPos)
             if nextSq.isEmpty():
                 validMoves.append(nextSq)
-                if pos[1]==1 and pos[0]==self.activePlayer.onDeskPosition:
+                if pos[1]==1:
                     sq = self.boardExample.getSquare(self.newPosition(pos,2,0))
                     if sq.isEmpty():
                         validMoves.append(sq)

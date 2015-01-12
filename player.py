@@ -73,25 +73,11 @@ class UserPlayer(Player):
                 #actually move figures on board
                 #if res == None then nobody is killed
                 #in other case res will get the killed player
-                anyLoses = self.move(self.squareWithSelectedFigure,sender.square)
+                killed = self.move(self.squareWithSelectedFigure,sender.square)
                 #was this:
-                #if res: res.emit(SIGNAL("player_lose"))
-                #changed to this:
-                if anyLoses:
-                    loser = anyLoses
-                    i = loser.id
-                    self.socket.send("killed_%dpl" % i)
-                    print "Message sended to server = 'killed_%dpl'. " % i
+                if killed: killed.isAlive = False; killed.emit(SIGNAL("player_lose"))
                 self.emit(SIGNAL("turnEndedByUser"))
             self.figuresContainer.boardExample.emit(SIGNAL("changed()"))
-
-    #unneeded
-    def informServerAboutLoserPlayer(self):
-        loser = QObject.sender(QObject())
-        i = loser.id
-        self.socket.send("killed_%dpl" % i)
-        print "Message sended to server = 'killed_%dpl'. " % i
-
 
 class RemotePlayer(Player):
     def makeRemoteMove(self):
@@ -105,4 +91,5 @@ class RemotePlayer(Player):
         dst = self.boardInstance.getSquare(newCoords[3:6])
         #apply it to the board instance
         #just moves figures on board
-        self.controllerObject.move(src, dst)
+        killed = self.controllerObject.move(src, dst)
+        if killed: killed.isAlive = False

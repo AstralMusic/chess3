@@ -3,14 +3,14 @@ __author__ = "Vladimir Konak"
 #__name__ = '__main__'
 import socket, sys, time, threading
 
-from  PyQt4 import QtGui
-from PyQt4.QtCore import QObject, QString, SIGNAL
+from PyQt4.QtGui import QApplication
+from PyQt4.QtCore import QObject, SIGNAL
 import default_settings
 
 from view import View
 from board import Board
 from controller import Controller
-from SetupDialog import SetupBox
+from Dialogs import SetupBox, TheEndBox
 
 class Client(QObject):
     def __init__(self):
@@ -26,6 +26,7 @@ class Client(QObject):
         QObject.connect(self, SIGNAL("newTurn"),self.play)
         QObject.connect(self, SIGNAL("otherUserFinishedTurn"),self.handleOutsideChangeTurn)
         QObject.connect(self, SIGNAL("end_the_game"),self.gameEnded)
+        QObject.connect(self, SIGNAL("finish"),self.showTheEndBox)
 
     def showSetupDialog(self):
         def takeInfo():
@@ -37,19 +38,18 @@ class Client(QObject):
         QObject.connect(junk,SIGNAL('infoGathered()'), takeInfo)
         junk.show()
 
+    def showTheEndBox(self):
+        server_msg = self.socket.recv(1)
+        winner = self.controllerObject.players[int(server_msg)].name
+        server_msg = self.socket.recv(1)
+        loser = self.controllerObject.players[int(server_msg)].name
+        self.controllerObject.activePlayer = None
+        box = TheEndBox(self.container)
+        box.setText("Winner: %s\n Loser: %s" % (winner, loser))
+        box.show()
+
     def setup(self):
         self.showSetupDialog()
-
-        #I guess it pretty clear
-        theEndMessage = QtGui.QLabel(self.container)
-        f = QtGui.QFont()
-        f.setPixelSize(43)
-        theEndMessage.setFont(f)
-        theEndMessage.setGeometry(200,300,400,200)
-        theEndMessage.setAutoFillBackground(True)
-        self.theEndMessage = theEndMessage
-
-
 
     def connectToServer(self):
         #send name and save own id
@@ -76,13 +76,12 @@ class Client(QObject):
                 try:
                     while junk:
                         i += 1
-                        junk.label2.setText(QString(str(text + "."*((i + 1)%6 + 1))))
+                        junk.waitingText(str(text + "."*((i + 1)%6 + 1)))
                         sleep(0.3)
                 except:
                     pass
             animate = threading.Thread(target=AWB)
             animate.start()
-
 
         except BaseException, e:
             print "Connection failed. %s" % str(e[0])
@@ -129,15 +128,9 @@ class Client(QObject):
             elif "killed" in server_msg:
                 loserId = int(server_msg[7])
                 self.controllerObject.players[loserId].isAlive = False
-                self.waitServerInstructions()
+                self.emit(SIGNAL("newTurn"))
             elif "finished_g" in server_msg:
-                server_msg = self.socket.recv(1)
-                winner = self.controllerObject.players[int(server_msg)].name
-                server_msg = self.socket.recv(1)
-                loser = self.controllerObject.players[int(server_msg)].name
-                self.controllerObject.activePlayer = None
-                self.theEndMessage.setText(QString("Winner: %s\n Loser: %s" % (winner, loser)))
-                self.theEndMessage.show()
+                self.emit(SIGNAL("finish"))
             elif "game_abort" in server_msg:
                 #self.emit(SIGNAL("end_the_game"))
                 self.app.closeAllWindows()
@@ -160,7 +153,8 @@ class Client(QObject):
             self.controllerObject.activePlayer.isActive = False
             self.controllerObject.activePlayer = self.controllerObject.players[(x+2)%3]
             self.controllerObject.activePlayer.isActive = True
-        else: self.waitServerInstructions()
+        else: self.emit(SIGNAL("finish"))
+        #else: self.waitServerInstructions()
 
 
     def handleInsideChangeTurn(self):
@@ -184,6 +178,7 @@ class Client(QObject):
         self.emit(SIGNAL("newTurn"))
 
     #get information of the move, made by remote player
+
     def makeRemoteMove(self):
         self.socket.setblocking(1)
         newCoords = list()
@@ -195,7 +190,8 @@ class Client(QObject):
         dst = self.boardInstance.getSquare(newCoords[3:6])
         #apply it to the board instance
         #just moves figures on board
-        self.controllerObject.move(src, dst)
+        self.controllerObject.activePlayer.move(src, dst)
+
 
     #in case of abortion
     def gameEnded(self):
@@ -211,7 +207,7 @@ class Client(QObject):
         time.sleep(0.025)
 
     def main(self):
-        self.app = QtGui.QApplication(sys.argv)
+        self.app = QApplication(sys.argv)
         self.container = View()
         self.boardInstance = Board()
 
@@ -221,8 +217,8 @@ class Client(QObject):
         #Following should work:
         QObject.connect(self.controllerObject.userPlayer, SIGNAL("turnEndedByUser"),self.handleInsideChangeTurn)
         QObject.connect(self.boardInstance, SIGNAL("changed()"),self.container.update)
-        #for i in xrange(3):
-            #QObject.connect(self.controllerObject.players[i],SIGNAL("player_lose"), self.informServerAboutLoserPlayer)
+        for i in xrange(3):
+            QObject.connect(self.controllerObject.players[i],SIGNAL("player_lose"), self.informServerAboutLoserPlayer)
 
         self.container.bindWithController(self.controllerObject)
         self.container.show()

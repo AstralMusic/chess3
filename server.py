@@ -99,7 +99,8 @@ class Server:
             for x in self.clients:
                 if x.isAlive: res += 1
             return  res
-        winner = loser = None
+        winner = None
+        loser = None
         #while not the only player alive
         GAME_FINISHED = False
         while not GAME_FINISHED:
@@ -155,7 +156,7 @@ class Server:
         if GAME_FINISHED:
             logging.info("Sending to the clients message about finished game 'finished_g'")
             for each in self.clients:
-                each.inform("finished_g")
+                #each.inform("finished_g")
                 each.inform(str(winner))
                 each.inform(str(loser))
 
